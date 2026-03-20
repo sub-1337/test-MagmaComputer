@@ -11,14 +11,27 @@ using two_models_ptr = std::pair<std::shared_ptr<model>, std::shared_ptr<model>>
 
 class model
 {
+private:
+	struct innerStructure
+	{
+		struct Vertex3d
+		{
+			double x;
+			double y;
+			double z;
+		};
+		using vertexId = size_t;
+		std::vector<Vertex3d> vertexes;
+	};
+	innerStructure structure;
 public:
 	two_models_ptr split() 
 	{
-		model_ptr model_cutted_1 = create_model();
-		model_ptr model_cutted_2 = create_model();
+		model_ptr model_cut_1 = create_model();
+		model_ptr model_cut_2 = create_model();
 		two_models_ptr result;
-		result.first = model_cutted_1;
-		result.second = model_cutted_2;
+		result.first = model_cut_1;
+		result.second = model_cut_2;
 		return result;
 	}
 	void readModel(const std::wstring& filename)

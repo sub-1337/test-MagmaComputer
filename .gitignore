@@ -31,3 +31,4 @@
 *.out
 *.app
 /splitter/.vs
+/splitter/out/build
