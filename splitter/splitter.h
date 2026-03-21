@@ -11,5 +11,6 @@
 #include <cmath>
 #include <fstream>
 #include <sstream>
+#include <cwctype>
 
 // TODO: установите здесь ссылки на дополнительные заголовки, требующиеся для программы.

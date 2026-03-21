@@ -20,6 +20,7 @@ class model
 private:
 	struct innerStructure
 	{
+	public:
 		struct Point3d
 		{
 			double x;
@@ -27,31 +28,54 @@ private:
 			double z;
 		};
 		using vertexId = size_t;
+		static constexpr const size_t TriangleVertexCount = 3;
+		struct Triangle
+		{
+			vertexId vert[TriangleVertexCount];
+		};
+	private:
 		std::vector<Point3d> vertexes;
-		std::vector<Point3d> normals;
-		
+		std::vector<Triangle> triangles;
+		//std::vector<Point3d> normals;
+
+	public:
 		static bool is_points_same(Point3d a, Point3d b)
 		{
 			return is_equal(a.x, b.x) && is_equal(a.y, b.y) && is_equal(a.z, b.z);		
 		}
 
-		vertexId addVertexIfNotExist(Point3d value)
+		vertexId addVertexIfNotExist(Point3d value) // minifies count of records by reusing old indices
 		{
 			for (vertexId i = 0; i < vertexes.size(); i++)
 			{
 				Point3d curr = vertexes[i];
 				if (is_points_same(value, curr))
 				{
-					return i;
+					return i + 1; // vertexes starts from 1
 				}
 			}
 			vertexes.push_back(value);
-			return vertexes.size() - 1;
+			return vertexes.size() + 1 - 1; // vertexes starts from 1
 		}
-		vertexId addVertexForce(Point3d value)
+		vertexId addVertexForce(Point3d value) // used at parsing
 		{
 			vertexes.push_back(value);
-			return vertexes.size() - 1;
+			return vertexes.size() + 1 - 1; // vertexes starts from 1
+		}
+		void addTriangle(Triangle value)
+		{
+			triangles.push_back(value);
+		}
+		Point3d returnVertexById(vertexId id)
+		{
+			if (id > 0 && ((id - 1) < vertexes.size()))
+			{
+				return vertexes[id - 1]; // vertexes starts from 1
+			}
+			else
+			{
+				throw std::runtime_error("Incorrect vertex id");
+			}
 		}
 	};
 	innerStructure structure;
@@ -65,6 +89,7 @@ public:
 		result.second = model_cut_2;
 		return result;
 	}
+	
 	void readModel(const std::wstring& filename)
 	{
 		std::wstring line;
@@ -72,7 +97,7 @@ public:
 
 		if (in.is_open()) 
 		{
-			for (long lineNumber = 0; std::getline(in, line); lineNumber++)
+			for (long lineNumber = 1; std::getline(in, line); lineNumber++)
 			{
 				if (line.empty()) // Ignore empty line
 				{
@@ -108,7 +133,81 @@ public:
 					std::wcerr << L"Error while parsing prefix, \"vn\" normals not supported at line " << lineNumber << std::endl;
 				}
 				else if (prefix == L"f")
-				{
+				{					
+					// Parse slashes at triangle definition
+					// reads first long number from string (before slashes)
+					auto helperParseOctet = [](const std::wstring & part, innerStructure::vertexId & vertex) -> bool 
+					{
+						std::wcout << part << std::endl;
+						innerStructure::vertexId value = 1;
+						std::wstring numbersString;
+						innerStructure::vertexId result;
+						for (size_t i = 0; i < part.size(); i++)
+						{
+							wchar_t curr = part[i];
+							if (iswdigit(curr))
+							{
+								numbersString += curr;
+							}
+							else
+							{
+								break;
+							}								
+						}
+						try
+						{
+							result = std::stol(numbersString);
+							vertex = result;
+							return true;
+						}
+						catch (...)
+						{
+							return false;
+						}
+					};
+					std::wstring part;
+					innerStructure::vertexId vertex_1;
+					innerStructure::vertexId vertex_2;
+					innerStructure::vertexId vertex_3;
+					if (iss >> part)
+					{
+						if (!helperParseOctet(part, vertex_1))
+						{
+							std::wcerr << L"Error while parsing triangle, 1st param, inner parse line " << lineNumber << std::endl;
+							continue;
+						}
+					}
+					else
+					{
+						std::wcerr << L"Error while parsing triangle, 1st param line " << lineNumber << std::endl;
+						continue;
+					}
+					if (iss >> part)
+					{
+						if (!helperParseOctet(part, vertex_2))
+						{
+							std::wcerr << L"Error while parsing triangle, 2ndt param, inner parse line " << lineNumber << std::endl;
+							continue;
+						}
+					}
+					else
+					{
+						std::wcerr << L"Error while parsing triangle, 2nd param line " << lineNumber << std::endl;
+						continue;
+					}
+					if (iss >> part)
+					{
+						if (!helperParseOctet(part, vertex_3))
+						{
+							std::wcerr << L"Error while parsing triangle, 3кrd param, inner parse line " << lineNumber << std::endl;
+							continue;
+						}
+					}
+					else
+					{
+						std::wcerr << L"Error while parsing triangle, 3rd param line " << lineNumber << std::endl;
+						continue;
+					}
 
 				}
 				else
