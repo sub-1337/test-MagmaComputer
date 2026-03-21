@@ -21,11 +21,13 @@ private:
 	struct innerStructure
 	{
 	public:
+		using coordinate = double;
+		using lenght = double;
 		struct Point3d
 		{
-			double x;
-			double y;
-			double z;
+			coordinate x;
+			coordinate y;
+			coordinate z;
 		};
 		using vertexId = size_t;
 		using normalId = size_t;
@@ -84,6 +86,17 @@ private:
 				throw std::runtime_error("Incorrect vertex id");
 			}
 		}
+		Point3d returnNormalById(vertexId id)
+		{
+			if (id > 0 && ((id - 1) < normals.size()))
+			{
+				return normals[id - 1]; // vertexes starts from 1
+			}
+			else
+			{
+				throw std::runtime_error("Incorrect vertex id");
+			}
+		}
 	};
 	innerStructure structure;
 public:
@@ -94,6 +107,65 @@ public:
 		two_models_ptr result;
 		result.first = model_cut_1;
 		result.second = model_cut_2;
+
+		for (size_t i = 0; i < structure.triangles.size(); i++)
+		{
+			std::wcout << "Triangle " << i << " of " << structure.triangles.size() << std::endl;
+			const innerStructure::Triangle currTriangle = structure.triangles[i];
+
+			// TODO: add try catch
+			innerStructure::Point3d p1 = structure.returnVertexById(currTriangle.vert[0]);
+			innerStructure::Point3d p2 = structure.returnVertexById(currTriangle.vert[1]);
+			innerStructure::Point3d p3 = structure.returnVertexById(currTriangle.vert[2]);
+			innerStructure::Point3d n1 = structure.returnNormalById(currTriangle.normal[0]);
+			innerStructure::Point3d n2 = structure.returnNormalById(currTriangle.normal[1]);
+			innerStructure::Point3d n3 = structure.returnNormalById(currTriangle.normal[2]);
+
+			double a = -5;
+			double b = 3;
+			double c = 2;
+			double d = 1;
+
+			auto getDistance = [a,b,c,d](innerStructure::Point3d p) -> innerStructure::coordinate
+				{
+					return a * p.x + b * p.y + c * p.z + d;
+				};
+
+			innerStructure::lenght S1 = getDistance(p1);
+			innerStructure::lenght S2 = getDistance(p2);
+			innerStructure::lenght S3 = getDistance(p3);
+
+			if ((std::signbit(S1) == std::signbit(S2)) && (std::signbit(S2) == std::signbit(S3)))
+			{
+				if (S1 > 0)
+				{
+					auto& currModel = model_cut_1;
+					innerStructure::vertexId p1_new = currModel->structure.addVertexForce(p1);
+					innerStructure::vertexId p2_new = currModel->structure.addVertexForce(p2);
+					innerStructure::vertexId p3_new = currModel->structure.addVertexForce(p3);
+
+					innerStructure::normalId n1_new = currModel->structure.addNormalForce(n1);
+					innerStructure::normalId n2_new = currModel->structure.addNormalForce(n2);
+					innerStructure::normalId n3_new = currModel->structure.addNormalForce(n3);
+
+					currModel->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new});
+				}
+				else
+				{
+					auto& currModel = model_cut_2;
+					innerStructure::vertexId p1_new = currModel->structure.addVertexForce(p1);
+					innerStructure::vertexId p2_new = currModel->structure.addVertexForce(p2);
+					innerStructure::vertexId p3_new = currModel->structure.addVertexForce(p3);
+
+					innerStructure::normalId n1_new = currModel->structure.addNormalForce(n1);
+					innerStructure::normalId n2_new = currModel->structure.addNormalForce(n2);
+					innerStructure::normalId n3_new = currModel->structure.addNormalForce(n3);
+
+					currModel->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
+				}
+			}			
+		}
+
 		return result;
 	}
 	
@@ -124,7 +196,7 @@ public:
 				}
 				else if (prefix == L"v") // Parse vertex
 				{
-					double x, y, z;
+					innerStructure::coordinate x, y, z;
 					if (iss >> x >> y >> z)
 					{
 						structure.addVertexForce(innerStructure::Point3d{ x,y,z });
@@ -137,7 +209,7 @@ public:
 				}
 				else if (prefix == L"vn")
 				{					
-					double x, y, z;
+					innerStructure::coordinate x, y, z;
 					if (iss >> x >> y >> z)
 					{
 						structure.addNormalForce(innerStructure::Point3d{ x,y,z });
@@ -275,14 +347,14 @@ public:
 };
 int main()
 {
-	std::wstring originalFile = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube.obj"; //L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb.obj"
+	std::wstring originalFile = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\bulb.obj"; //L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb.obj"
 	std::wstring outTestFile = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_saved.obj";
-	std::wstring saveFileLeft = L"D:\\VMShare\\test - MagmaComputer\\splitter\\tests\\files\\cube_left.obj"; // L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb_left.obj"
-	std::wstring saveFileRight = L"D:\\VMShare\\test - MagmaComputer\\splitter\\tests\\files\\cube_right.obj";
+	std::wstring saveFileLeft = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\bulb_left.obj"; // L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb_left.obj"
+	std::wstring saveFileRight = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\bulb_right.obj";
 	
 	model_ptr m = create_model();
 	m->readModel(originalFile);
-	m->saveModel(outTestFile);
+	//m->saveModel(outTestFile);
 	two_models_ptr models = m->split();
 
 	models.first->saveModel(saveFileLeft);
