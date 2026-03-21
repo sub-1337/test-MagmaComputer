@@ -17,7 +17,7 @@ bool is_equal(T a, T b, T epsilon = 1e-9)
 	return std::abs(a - b) < epsilon;
 }
 
-// Main class of model read/write splitting functionality
+// Main class of model read/write/splitting functionality
 class model
 {
 private:
@@ -42,6 +42,7 @@ private:
 		using normalId = size_t;
 		static constexpr const size_t TriangleVertexCount = 3;
 		// Used for stroring and saving face
+		// it stores id's of vertexes and normals (which starts with 1)
 		struct Triangle
 		{
 			vertexId vert[TriangleVertexCount];
@@ -62,6 +63,7 @@ private:
 			return is_equal(a.x, b.x) && is_equal(a.y, b.y) && is_equal(a.z, b.z);		
 		}
 
+		// Next 3 functions return id of stored object
 		// Adds vertex to DB but only it's value is unique
 		vertexId addVertexIfNotExist(Point3d value) // minifies count of records by reusing old indices
 		{
