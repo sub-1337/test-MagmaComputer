@@ -10,5 +10,6 @@
 #include <memory>
 #include <cmath>
 #include <fstream>
+#include <sstream>
 
 // TODO: установите здесь ссылки на дополнительные заголовки, требующиеся для программы.

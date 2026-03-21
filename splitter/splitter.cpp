@@ -67,34 +67,56 @@ public:
 	}
 	void readModel(const std::wstring& filename)
 	{
-		std::string line;
-		std::ifstream in(filename);
+		std::wstring line;
+		std::wifstream in(filename);
 
 		if (in.is_open()) 
 		{
 			for (long lineNumber = 0; std::getline(in, line); lineNumber++)
 			{
-				if (line.size() > 0)
+				if (line.empty()) // Ignore empty line
 				{
-					if (line[0] == '#') // If we met comment
+					continue;
+				}
+				std::wistringstream iss(line);
+				std::wstring prefix;
+				if (!(iss >> prefix))
+				{
+					std::wcerr << L"Error while parsing prefix at line " << lineNumber << std::endl;
+					continue;
+				}
+					
+				if (prefix == L"#") // Ignore comment
+				{
+					continue;
+				}
+				else if (prefix == L"v") // Parse vertex
+				{
+					double x, y, z;
+					if (iss >> x >> y >> z)
 					{
+						structure.addVertexForce(innerStructure::Point3d{ x,y,z });
+					}
+					else
+					{
+						std::wcerr << L"Error while parsing numbers at line " << lineNumber << std::endl;
 						continue;
 					}
-					if (line[0] == 'v' && (line.size() >=2 && line[1] != 'n')) // If we met vertex clause not normal
-					{
-						try
-						{
-							double x = std::stod(line);
-							double y = std::stod(line);
-							double z = std::stod(line);
-						}
-						catch (const std::exception& e)
-						{
-							std::cerr << "Read failed on line " << lineNumber << ": " << e.what() << std::endl;
-						}
-						//structure.addVertexForce(innerStructure::Point3d{0,10,0});
-					}
 				}
+				else if (prefix == L"vn")
+				{
+					std::wcerr << L"Error while parsing prefix, \"vn\" normals not supported at line " << lineNumber << std::endl;
+				}
+				else if (prefix == L"f")
+				{
+
+				}
+				else
+				{
+					std::wcerr << L"Error while parsing, not known prefix \"" << prefix<< "\" at line " << lineNumber << std::endl;
+					continue;
+				}
+					
 			}
 		}
 		else 
