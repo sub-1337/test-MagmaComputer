@@ -33,7 +33,7 @@ private:
 		{
 			vertexId vert[TriangleVertexCount];
 		};
-	private:
+	//private:
 		std::vector<Point3d> vertexes;
 		std::vector<Triangle> triangles;
 		//std::vector<Point3d> normals;
@@ -138,7 +138,6 @@ public:
 					// reads first long number from string (before slashes)
 					auto helperParseOctet = [](const std::wstring & part, innerStructure::vertexId & vertex) -> bool 
 					{
-						std::wcout << part << std::endl;
 						innerStructure::vertexId value = 1;
 						std::wstring numbersString;
 						innerStructure::vertexId result;
@@ -209,6 +208,16 @@ public:
 						continue;
 					}
 
+					try 
+					{
+						structure.addTriangle(innerStructure::Triangle{ vertex_1, vertex_2, vertex_3 });
+					}
+					catch (...)
+					{
+						std::wcerr << L"Error while adding triangle" << std::endl;
+						in.close();
+						throw;
+					}
 				}
 				else
 				{
@@ -227,21 +236,42 @@ public:
 	}
 	void saveModel(const std::wstring& filename)
 	{
+		std::wofstream out(filename);
 
+		out << "# Created by test program" << std::endl;
+
+		// Output vertexes
+		for (size_t i = 0; i < structure.vertexes.size(); i++)
+		{
+			out << "v" 
+				<< " " << structure.vertexes[i].x
+				<< " " << structure.vertexes[i].y
+				<< " " << structure.vertexes[i].z << std::endl;
+		}
+		// Output triangles
+		for (size_t i = 0; i < structure.triangles.size(); i++)
+		{
+			out << "f"
+				<< " " << structure.triangles[i].vert[0]
+				<< " " << structure.triangles[i].vert[1]
+				<< " " << structure.triangles[i].vert[2] << std::endl;
+		}
 	}
 };
 int main()
 {
-	std::wstring originalFile = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\surface.obj"; //L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb.obj"
-	std::wstring saveFileLeft = L"D:\\VMShare\\test - MagmaComputer\\splitter\\tests\\files\\surface_left.obj"; // L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb_left.obj"
-	std::wstring saveFileRight = L"D:\\VMShare\\test - MagmaComputer\\splitter\\tests\\files\\surface_right.obj";
+	std::wstring originalFile = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube.obj"; //L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb.obj"
+	std::wstring outTestFile = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_saved.obj";
+	std::wstring saveFileLeft = L"D:\\VMShare\\test - MagmaComputer\\splitter\\tests\\files\\cube_left.obj"; // L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb_left.obj"
+	std::wstring saveFileRight = L"D:\\VMShare\\test - MagmaComputer\\splitter\\tests\\files\\cube_right.obj";
 	
 	model_ptr m = create_model();
 	m->readModel(originalFile);
-	two_models_ptr models = m->split();
+	m->saveModel(outTestFile);
+	//two_models_ptr models = m->split();
 
-	models.first->saveModel(saveFileLeft);
-	models.second->saveModel(saveFileRight);
+	//models.first->saveModel(saveFileLeft);
+	//models.second->saveModel(saveFileRight);
 
 	return 0;
 }
