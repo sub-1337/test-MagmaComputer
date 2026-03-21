@@ -1,5 +1,6 @@
 ﻿#include "splitter.h"
 
+// Useful aliases
 class model;
 using model_ptr = std::shared_ptr<model>;
 template <typename... Args>
@@ -9,45 +10,59 @@ model_ptr create_model(Args... args)
 }
 using two_models_ptr = std::pair<std::shared_ptr<model>, std::shared_ptr<model>>;
 
+// Check if number values are equal
 template <typename T>
 bool is_equal(T a, T b, T epsilon = 1e-9)
 {
 	return std::abs(a - b) < epsilon;
 }
 
+// Main class of model read/write splitting functionality
 class model
 {
 private:
+	// Inner implementation of basic objects and methods
 	struct innerStructure
 	{
 	public:
+		// Used for usage in structures
 		using coordinate = double;
+		// Used for lenght calculations
 		using lenght = double;
+		// Used for representing 3d point in space
 		struct Point3d
 		{
 			coordinate x;
 			coordinate y;
 			coordinate z;
 		};
+		// Used for vertex enumeration
 		using vertexId = size_t;
+		// Used for normals enumeration
 		using normalId = size_t;
 		static constexpr const size_t TriangleVertexCount = 3;
+		// Used for stroring and saving face
 		struct Triangle
 		{
 			vertexId vert[TriangleVertexCount];
 			normalId normal[TriangleVertexCount];
 		};
-	//private:
+		// Vertex and normals storage
+		// vertex id is equal to (index + 1) cause they start from 1 not 0
 		std::vector<Point3d> vertexes;
-		std::vector<Triangle> triangles;
 		std::vector<Point3d> normals;
 
+		std::vector<Triangle> triangles;
+
 	public:
+		// Roughly calculates is points the same
+		// useful for vertex packing
 		static bool is_points_same(Point3d a, Point3d b)
 		{
 			return is_equal(a.x, b.x) && is_equal(a.y, b.y) && is_equal(a.z, b.z);		
 		}
 
+		// Adds vertex to DB but only it's value is unique
 		vertexId addVertexIfNotExist(Point3d value) // minifies count of records by reusing old indices
 		{
 			for (vertexId i = 0; i < vertexes.size(); i++)
@@ -61,20 +76,24 @@ private:
 			vertexes.push_back(value);
 			return vertexes.size() + 1 - 1; // vertexes starts from 1
 		}
+		// Add vertex fast no matter what
 		vertexId addVertexForce(Point3d value) // used at parsing
 		{
 			vertexes.push_back(value);
 			return vertexes.size() + 1 - 1; // vertexes starts from 1
 		}
+		// Add normal fast no matter what
 		normalId addNormalForce(Point3d value)
 		{
 			normals.push_back(value);
 			return vertexes.size() + 1 - 1;// normals starts from 1
 		}
+		// Adds face with id of vertex/normals
 		void addTriangle(Triangle value)
 		{
 			triangles.push_back(value);
 		}
+		// Self explanatory
 		Point3d returnVertexById(vertexId id)
 		{
 			if (id > 0 && ((id - 1) < vertexes.size()))
@@ -98,8 +117,11 @@ private:
 			}
 		}
 	};
+	// Inner model guts, works as model database
 	innerStructure structure;
 public:
+	// Split current model by plane
+	// returns 2 smart pointers with new models
 	two_models_ptr split() 
 	{
 		model_ptr model_cut_1 = create_model();
@@ -137,54 +159,55 @@ public:
 
 			if ((std::signbit(S1) == std::signbit(S2)) && (std::signbit(S2) == std::signbit(S3)))
 			{
+				model_ptr currModel;
 				if (S1 > 0)
 				{
-					auto& currModel = model_cut_1;
-					innerStructure::vertexId p1_new = currModel->structure.addVertexForce(p1);
-					innerStructure::vertexId p2_new = currModel->structure.addVertexForce(p2);
-					innerStructure::vertexId p3_new = currModel->structure.addVertexForce(p3);
-
-					innerStructure::normalId n1_new = currModel->structure.addNormalForce(n1);
-					innerStructure::normalId n2_new = currModel->structure.addNormalForce(n2);
-					innerStructure::normalId n3_new = currModel->structure.addNormalForce(n3);
-
-					currModel->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new});
+					currModel = model_cut_1;
+					
 				}
 				else
 				{
-					auto& currModel = model_cut_2;
-					innerStructure::vertexId p1_new = currModel->structure.addVertexForce(p1);
-					innerStructure::vertexId p2_new = currModel->structure.addVertexForce(p2);
-					innerStructure::vertexId p3_new = currModel->structure.addVertexForce(p3);
-
-					innerStructure::normalId n1_new = currModel->structure.addNormalForce(n1);
-					innerStructure::normalId n2_new = currModel->structure.addNormalForce(n2);
-					innerStructure::normalId n3_new = currModel->structure.addNormalForce(n3);
-
-					currModel->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
+					currModel = model_cut_2;
 				}
+				innerStructure::vertexId p1_new = currModel->structure.addVertexForce(p1);
+				innerStructure::vertexId p2_new = currModel->structure.addVertexForce(p2);
+				innerStructure::vertexId p3_new = currModel->structure.addVertexForce(p3);
+
+				innerStructure::normalId n1_new = currModel->structure.addNormalForce(n1);
+				innerStructure::normalId n2_new = currModel->structure.addNormalForce(n2);
+				innerStructure::normalId n3_new = currModel->structure.addNormalForce(n3);
+
+				currModel->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
 			}			
 		}
 
 		return result;
 	}
-	
+	// Parses file in .obj format
+	// Ignores lines with incorrect format
 	void readModel(const std::wstring& filename)
 	{
+		// Buffer for each line
 		std::wstring line;
+		// File to read
 		std::wifstream in(filename);
 
 		if (in.is_open()) 
 		{
+			// Iterates with reading each line to 'line'
+			// Also counting line number
 			for (long lineNumber = 1; std::getline(in, line); lineNumber++)
 			{
 				if (line.empty()) // Ignore empty line
 				{
 					continue;
 				}
+				// Object to parse eacj string
 				std::wistringstream iss(line);
+				// Prefix with wich ste string starts
 				std::wstring prefix;
-				if (!(iss >> prefix))
+
+				if (!(iss >> prefix)) // If error while reading part of line
 				{
 					std::wcerr << L"Error while parsing prefix at line " << lineNumber << std::endl;
 					continue;
@@ -197,7 +220,7 @@ public:
 				else if (prefix == L"v") // Parse vertex
 				{
 					innerStructure::coordinate x, y, z;
-					if (iss >> x >> y >> z)
+					if (iss >> x >> y >> z) // Read 3 numbers and checks read success
 					{
 						structure.addVertexForce(innerStructure::Point3d{ x,y,z });
 					}
@@ -207,7 +230,7 @@ public:
 						continue;
 					}
 				}
-				else if (prefix == L"vn")
+				else if (prefix == L"vn") // Parse normal
 				{					
 					innerStructure::coordinate x, y, z;
 					if (iss >> x >> y >> z)
@@ -220,13 +243,16 @@ public:
 						continue;
 					}
 				}
-				else if (prefix == L"f")
+				else if (prefix == L"f") // Parse triangle
 				{					
-					// Parse slashes at triangle definition
+					// Parse indexes/normals listed in triangle record
+					// It reads first float point number
+					// then checks for '//' value
+					// then reads the second
+					// the rest of string is discard
 					auto helperParseOctet = [](const std::wstring & part, innerStructure::vertexId& vertex, innerStructure::normalId& normal) -> bool
 					{
 						std::wstringstream ss(part);
-						if (!(ss >> vertex))
 						if (!(ss >> vertex))
 							return false;
 						wchar_t _skip1, _skip2;
@@ -237,6 +263,7 @@ public:
 							return false;
 						return true;
 					};
+					// String to store packs of parameters at face record
 					std::wstring part;
 					innerStructure::vertexId vertex_1;
 					innerStructure::normalId normal_1;
@@ -248,7 +275,7 @@ public:
 					innerStructure::normalId normal_3;
 					if (iss >> part)
 					{
-						if (!helperParseOctet(part, vertex_1, normal_1))
+						if (!helperParseOctet(part, vertex_1, normal_1)) // read 1st parameter pack at face record (then read the rest)
 						{
 							std::wcerr << L"Error while parsing triangle, 1st param, inner parse line " << lineNumber << std::endl;
 							continue;
@@ -312,10 +339,12 @@ public:
 
 		in.close();
 	}
+	// Saves current model to file in .obj format
 	void saveModel(const std::wstring& filename)
 	{
 		std::wofstream out(filename);
 
+		// Output commentary
 		out << "# Created by test program" << std::endl;
 
 		// Output vertexes
@@ -347,10 +376,10 @@ public:
 };
 int main()
 {
-	std::wstring originalFile = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\bulb.obj"; //L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb.obj"
+	std::wstring originalFile = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube.obj"; //L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb.obj"
 	std::wstring outTestFile = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_saved.obj";
-	std::wstring saveFileLeft = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\bulb_left.obj"; // L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb_left.obj"
-	std::wstring saveFileRight = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\bulb_right.obj";
+	std::wstring saveFileLeft = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_left.obj"; // L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb_left.obj"
+	std::wstring saveFileRight = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_right.obj";
 	
 	model_ptr m = create_model();
 	m->readModel(originalFile);
