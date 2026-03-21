@@ -8,5 +8,7 @@
 #include <string>
 #include <utility>
 #include <memory>
+#include <cmath>
+#include <fstream>
 
 // TODO: установите здесь ссылки на дополнительные заголовки, требующиеся для программы.
