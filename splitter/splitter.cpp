@@ -28,15 +28,17 @@ private:
 			double z;
 		};
 		using vertexId = size_t;
+		using normalId = size_t;
 		static constexpr const size_t TriangleVertexCount = 3;
 		struct Triangle
 		{
 			vertexId vert[TriangleVertexCount];
+			normalId normal[TriangleVertexCount];
 		};
 	//private:
 		std::vector<Point3d> vertexes;
 		std::vector<Triangle> triangles;
-		//std::vector<Point3d> normals;
+		std::vector<Point3d> normals;
 
 	public:
 		static bool is_points_same(Point3d a, Point3d b)
@@ -61,6 +63,11 @@ private:
 		{
 			vertexes.push_back(value);
 			return vertexes.size() + 1 - 1; // vertexes starts from 1
+		}
+		normalId addNormalForce(Point3d value)
+		{
+			normals.push_back(value);
+			return vertexes.size() + 1 - 1;// normals starts from 1
 		}
 		void addTriangle(Triangle value)
 		{
@@ -124,29 +131,38 @@ public:
 					}
 					else
 					{
-						std::wcerr << L"Error while parsing numbers at line " << lineNumber << std::endl;
+						std::wcerr << L"Error while parsing vertex at line " << lineNumber << std::endl;
 						continue;
 					}
 				}
 				else if (prefix == L"vn")
-				{
-					std::wcerr << L"Error while parsing prefix, \"vn\" normals not supported at line " << lineNumber << std::endl;
+				{					
+					double x, y, z;
+					if (iss >> x >> y >> z)
+					{
+						structure.addNormalForce(innerStructure::Point3d{ x,y,z });
+					}
+					else
+					{
+						std::wcerr << L"Error while parsing normals at line " << lineNumber << std::endl;
+						continue;
+					}
 				}
 				else if (prefix == L"f")
 				{					
 					// Parse slashes at triangle definition
-					// reads first long number from string (before slashes)
-					auto helperParseOctet = [](const std::wstring & part, innerStructure::vertexId & vertex) -> bool 
+					auto helperParseOctet = [](const std::wstring & part, innerStructure::vertexId& vertex, innerStructure::normalId& normal) -> bool
 					{
 						innerStructure::vertexId value = 1;
-						std::wstring numbersString;
-						innerStructure::vertexId result;
+						std::wstring numbersVertexString;
+						innerStructure::vertexId resultVertex;
+						innerStructure::normalId resultNormal;
 						for (size_t i = 0; i < part.size(); i++)
 						{
 							wchar_t curr = part[i];
 							if (iswdigit(curr))
 							{
-								numbersString += curr;
+								numbersVertexString += curr;
 							}
 							else
 							{
@@ -155,22 +171,30 @@ public:
 						}
 						try
 						{
-							result = std::stol(numbersString);
-							vertex = result;
+							resultVertex = std::stol(numbersVertexString);
+							vertex = resultVertex;
+
+							normal = 10;
 							return true;
 						}
 						catch (...)
 						{
 							return false;
 						}
+						return false;
 					};
 					std::wstring part;
 					innerStructure::vertexId vertex_1;
+					innerStructure::normalId normal_1;
+
 					innerStructure::vertexId vertex_2;
+					innerStructure::normalId normal_2;
+
 					innerStructure::vertexId vertex_3;
+					innerStructure::normalId normal_3;
 					if (iss >> part)
 					{
-						if (!helperParseOctet(part, vertex_1))
+						if (!helperParseOctet(part, vertex_1, normal_1))
 						{
 							std::wcerr << L"Error while parsing triangle, 1st param, inner parse line " << lineNumber << std::endl;
 							continue;
@@ -183,7 +207,7 @@ public:
 					}
 					if (iss >> part)
 					{
-						if (!helperParseOctet(part, vertex_2))
+						if (!helperParseOctet(part, vertex_2, normal_2))
 						{
 							std::wcerr << L"Error while parsing triangle, 2ndt param, inner parse line " << lineNumber << std::endl;
 							continue;
@@ -196,7 +220,7 @@ public:
 					}
 					if (iss >> part)
 					{
-						if (!helperParseOctet(part, vertex_3))
+						if (!helperParseOctet(part, vertex_3, normal_3))
 						{
 							std::wcerr << L"Error while parsing triangle, 3кrd param, inner parse line " << lineNumber << std::endl;
 							continue;
@@ -210,7 +234,7 @@ public:
 
 					try 
 					{
-						structure.addTriangle(innerStructure::Triangle{ vertex_1, vertex_2, vertex_3 });
+						structure.addTriangle(innerStructure::Triangle{ vertex_1, vertex_2, vertex_3, normal_1, normal_2, normal_3 });
 					}
 					catch (...)
 					{
@@ -248,13 +272,22 @@ public:
 				<< " " << structure.vertexes[i].y
 				<< " " << structure.vertexes[i].z << std::endl;
 		}
+		// Output normals
+		for (size_t i = 0; i < structure.normals.size(); i++)
+		{
+			out << "v"
+				<< " " << structure.normals[i].x
+				<< " " << structure.normals[i].y
+				<< " " << structure.normals[i].z << std::endl;
+		}
 		// Output triangles
 		for (size_t i = 0; i < structure.triangles.size(); i++)
 		{
 			out << "f"
-				<< " " << structure.triangles[i].vert[0]
-				<< " " << structure.triangles[i].vert[1]
-				<< " " << structure.triangles[i].vert[2] << std::endl;
+				<< " " << structure.triangles[i].vert[0] << "//" << structure.triangles[i].normal[0]
+				<< " " << structure.triangles[i].vert[1] << "//" << structure.triangles[i].normal[1]
+				<< " " << structure.triangles[i].vert[2] << "//" << structure.triangles[i].normal[2] 
+				<< std::endl;
 		}
 	}
 };
