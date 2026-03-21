@@ -153,35 +153,17 @@ public:
 					// Parse slashes at triangle definition
 					auto helperParseOctet = [](const std::wstring & part, innerStructure::vertexId& vertex, innerStructure::normalId& normal) -> bool
 					{
-						innerStructure::vertexId value = 1;
-						std::wstring numbersVertexString;
-						innerStructure::vertexId resultVertex;
-						innerStructure::normalId resultNormal;
-						for (size_t i = 0; i < part.size(); i++)
-						{
-							wchar_t curr = part[i];
-							if (iswdigit(curr))
-							{
-								numbersVertexString += curr;
-							}
-							else
-							{
-								break;
-							}								
-						}
-						try
-						{
-							resultVertex = std::stol(numbersVertexString);
-							vertex = resultVertex;
-
-							normal = 10;
-							return true;
-						}
-						catch (...)
-						{
+						std::wstringstream ss(part);
+						if (!(ss >> vertex))
+						if (!(ss >> vertex))
 							return false;
-						}
-						return false;
+						wchar_t _skip1, _skip2;
+						ss >> _skip1 >> _skip2;
+						if ((_skip1 != _skip2) && (_skip1 != L'/'))
+							return false;
+						if (!(ss >> normal))
+							return false;
+						return true;
 					};
 					std::wstring part;
 					innerStructure::vertexId vertex_1;
@@ -275,7 +257,7 @@ public:
 		// Output normals
 		for (size_t i = 0; i < structure.normals.size(); i++)
 		{
-			out << "v"
+			out << "vn"
 				<< " " << structure.normals[i].x
 				<< " " << structure.normals[i].y
 				<< " " << structure.normals[i].z << std::endl;
@@ -301,10 +283,10 @@ int main()
 	model_ptr m = create_model();
 	m->readModel(originalFile);
 	m->saveModel(outTestFile);
-	//two_models_ptr models = m->split();
+	two_models_ptr models = m->split();
 
-	//models.first->saveModel(saveFileLeft);
-	//models.second->saveModel(saveFileRight);
+	models.first->saveModel(saveFileLeft);
+	models.second->saveModel(saveFileRight);
 
 	return 0;
 }
