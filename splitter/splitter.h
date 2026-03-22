@@ -12,5 +12,8 @@
 #include <fstream>
 #include <sstream>
 #include <cwctype>
+#include <array>
+#include <chrono>
+#include <list>
 
 // TODO: установите здесь ссылки на дополнительные заголовки, требующиеся для программы.

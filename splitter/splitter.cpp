@@ -62,9 +62,19 @@ private:
 		{
 			return is_equal(a.x, b.x) && is_equal(a.y, b.y) && is_equal(a.z, b.z);		
 		}
+		// Vector multiplication
+		static Point3d cross(Point3d a, Point3d b)
+		{
+			Point3d c;
+			c.x = a.y * b.z - a.z * b.y;
+			c.y = a.z * b.x - a.x * b.z;
+			c.z = a.x * b.y - a.y * b.x;
+			return c;
+		}
 
 		// Next 3 functions return id of stored object
 		// Adds vertex to DB but only it's value is unique
+		// TODO: rewrite more optimal
 		vertexId addVertexIfNotExist(Point3d value) // minifies count of records by reusing old indices
 		{
 			for (vertexId i = 0; i < vertexes.size(); i++)
@@ -134,16 +144,31 @@ public:
 
 		for (size_t i = 0; i < structure.triangles.size(); i++)
 		{
-			std::wcout << "Triangle " << i << " of " << structure.triangles.size() << std::endl;
+			//std::wcout << "Triangle " << i << " of " << structure.triangles.size() << std::endl;
 			const innerStructure::Triangle currTriangle = structure.triangles[i];
 
-			// TODO: add try catch
-			innerStructure::Point3d p1 = structure.returnVertexById(currTriangle.vert[0]);
-			innerStructure::Point3d p2 = structure.returnVertexById(currTriangle.vert[1]);
-			innerStructure::Point3d p3 = structure.returnVertexById(currTriangle.vert[2]);
-			innerStructure::Point3d n1 = structure.returnNormalById(currTriangle.normal[0]);
-			innerStructure::Point3d n2 = structure.returnNormalById(currTriangle.normal[1]);
-			innerStructure::Point3d n3 = structure.returnNormalById(currTriangle.normal[2]);
+			innerStructure::Point3d p1;
+			innerStructure::Point3d p2;
+			innerStructure::Point3d p3;
+			innerStructure::Point3d n1;
+			innerStructure::Point3d n2;
+			innerStructure::Point3d n3;
+
+			try
+			{
+				p1 = structure.returnVertexById(currTriangle.vert[0]);
+				p2 = structure.returnVertexById(currTriangle.vert[1]);
+				p3 = structure.returnVertexById(currTriangle.vert[2]);
+				n1 = structure.returnNormalById(currTriangle.normal[0]);
+				n2 = structure.returnNormalById(currTriangle.normal[1]);
+				n3 = structure.returnNormalById(currTriangle.normal[2]);
+			}
+			catch (const std::runtime_error& err)
+			{
+				std::wcerr << "Internal error: " << err.what();
+				continue;
+			}
+			
 
 			double a = -5;
 			double b = 3;
@@ -159,6 +184,7 @@ public:
 			innerStructure::lenght S2 = getDistance(p2);
 			innerStructure::lenght S3 = getDistance(p3);
 
+			// Check if all 3 point exist entirely from one or other side
 			if ((std::signbit(S1) == std::signbit(S2)) && (std::signbit(S2) == std::signbit(S3)))
 			{
 				model_ptr currModel;
@@ -171,16 +197,21 @@ public:
 				{
 					currModel = model_cut_2;
 				}
-				innerStructure::vertexId p1_new = currModel->structure.addVertexForce(p1);
-				innerStructure::vertexId p2_new = currModel->structure.addVertexForce(p2);
-				innerStructure::vertexId p3_new = currModel->structure.addVertexForce(p3);
+				innerStructure::vertexId p1_new = currModel->structure.addVertexIfNotExist(p1);
+				innerStructure::vertexId p2_new = currModel->structure.addVertexIfNotExist(p2);
+				innerStructure::vertexId p3_new = currModel->structure.addVertexIfNotExist(p3);
 
 				innerStructure::normalId n1_new = currModel->structure.addNormalForce(n1);
 				innerStructure::normalId n2_new = currModel->structure.addNormalForce(n2);
 				innerStructure::normalId n3_new = currModel->structure.addNormalForce(n3);
 
 				currModel->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
-			}			
+			}
+			else
+			{
+
+			}
+
 		}
 
 		return result;
@@ -252,7 +283,7 @@ public:
 					// then checks for '//' value
 					// then reads the second
 					// the rest of string is discard
-					auto helperParseOctet = [](const std::wstring & part, innerStructure::vertexId& vertex, innerStructure::normalId& normal) -> bool
+					auto helperParseOctet = [&lineNumber](const std::wstring & part, innerStructure::vertexId& vertex, innerStructure::normalId& normal) -> bool
 					{
 						std::wstringstream ss(part);
 						if (!(ss >> vertex))
@@ -263,6 +294,11 @@ public:
 							return false;
 						if (!(ss >> normal))
 							return false;
+						std::wstring _check;
+						if (ss >> _check)
+						{
+							std::wcerr << "Warning additional info \"" << _check << "\" at face definition ignored line: " << lineNumber << std::endl;
+						}
 						return true;
 					};
 					// String to store packs of parameters at face record
@@ -384,12 +420,23 @@ int main()
 	std::wstring saveFileRight = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_right.obj";
 	
 	model_ptr m = create_model();
+	auto startRead = std::chrono::steady_clock::now();
 	m->readModel(originalFile);
+	auto endRead = std::chrono::steady_clock::now();
+
+	auto durationRead = std::chrono::duration_cast<std::chrono::milliseconds>(endRead - startRead);
+
 	//m->saveModel(outTestFile);
+	auto startSplit = std::chrono::steady_clock::now();
 	two_models_ptr models = m->split();
+	auto endSplit = std::chrono::steady_clock::now();
+	auto durationSplit = std::chrono::duration_cast<std::chrono::milliseconds>(endSplit - startSplit);
 
 	models.first->saveModel(saveFileLeft);
 	models.second->saveModel(saveFileRight);
+
+	std::wcout << "Read time: " << durationRead.count() << std::endl;
+	std::wcout << "Split time: " << durationSplit.count() << std::endl;
 
 	return 0;
 }

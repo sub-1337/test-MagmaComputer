@@ -7,7 +7,7 @@ if (POLICY CMP0141)
 endif()
 
 project ("splitter")
-add_executable (splitter "splitter.cpp" "splitter.h" "tests/tests.cpp")
+add_executable (splitter "splitter.cpp" "splitter.h")
 
 # add_subdirectory(tests)
 
