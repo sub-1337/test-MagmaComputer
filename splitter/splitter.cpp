@@ -71,7 +71,25 @@ private:
 			c.z = a.x * b.y - a.y * b.x;
 			return c;
 		}
+		// TODO: replace double with aliased value
+		// Value of the plane at point
+		static double planeValue(double a, double b, double c, double d, Point3d p) {
+			return a * p.x + b * p.y + c * p.z + d;
+		}
+		// Intersection of line with plane
+		static Point3d intersect(Point3d p1, Point3d p2, double a, double b, double c, double d) {
+			double v1 = planeValue(a, b, c, d, p1);
+			double v2 = planeValue(a, b, c, d, p2);
 
+			double t = v1 / (v1 - v2);
+
+			Point3d res;
+			res.x = p1.x + t * (p2.x - p1.x);
+			res.y = p1.y + t * (p2.y - p1.y);
+			res.z = p1.z + t * (p2.z - p1.z);
+
+			return res;
+		}
 		// Next 3 functions return id of stored object
 		// Adds vertex to DB but only it's value is unique
 		// TODO: rewrite more optimal
@@ -209,8 +227,137 @@ public:
 			}
 			else
 			{
+				auto calcIntersect = [](const innerStructure::Point3d T1, const innerStructure::Point3d T2, const innerStructure::Point3d T3,
+					double a, double b, double c, double d) -> std::vector<innerStructure::Point3d>
+					{
+					std::vector<innerStructure::Point3d> result;
+
+					std::vector<innerStructure::Point3d> pts = { T1, T2, T3 };
+
+					for (size_t i = 0; i < 3; i++) {
+						innerStructure::Point3d p1 = pts[i];
+						innerStructure::Point3d p2 = pts[(i + 1) % 3];
+
+						double v1 = innerStructure::planeValue(a, b, c, d, p1);
+						double v2 = innerStructure::planeValue(a, b, c, d, p2);
+
+						// точка лежит на плоскости
+						if (is_equal(v1, 0.0)) result.push_back(p1);
+						if (is_equal(v2, 0.0)) result.push_back(p2);
+
+						// пересечение ребра
+						if (v1 * v2 < 0) {
+							result.push_back(innerStructure::intersect(p1, p2, a, b, c, d));
+						}
+					}
+
+					// убираем лишние точки (максимум 2)
+					if (result.size() > 2)
+						result.resize(2);
+
+					return result;
+					};
+				std::vector<innerStructure::Point3d> cutPoints = calcIntersect(p1, p2, p3, a, b, c, d);
+
+				//TODO: refactor
+				if (cutPoints.size() < 2) // If no intersection
+				{
+					model_ptr currModel;
+					if (S1 > 0)
+					{
+						currModel = model_cut_1;
+
+					}
+					else
+					{
+						currModel = model_cut_2;
+					}
+					innerStructure::vertexId p1_new = currModel->structure.addVertexIfNotExist(p1);
+					innerStructure::vertexId p2_new = currModel->structure.addVertexIfNotExist(p2);
+					innerStructure::vertexId p3_new = currModel->structure.addVertexIfNotExist(p3);
+
+					innerStructure::normalId n1_new = currModel->structure.addNormalForce(n1);
+					innerStructure::normalId n2_new = currModel->structure.addNormalForce(n2);
+					innerStructure::normalId n3_new = currModel->structure.addNormalForce(n3);
+
+					currModel->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
+
+					continue;
+				}
+
+				innerStructure::Point3d I1 = cutPoints[0];
+				innerStructure::Point3d I2 = cutPoints[1];
+
+				std::vector<innerStructure::Point3d> pts = { p1, p2, p3 };
+
+				// делим вершины по сторонам плоскости
+				std::vector<innerStructure::Point3d> pos, neg;
+
+				for (auto& p : pts) {
+					if (innerStructure::planeValue(a, b, c, d, p) >= 0)
+						pos.push_back(p);
+					else
+						neg.push_back(p);
+				}
+
+				// случай: 1 вершина с одной стороны, 2 с другой
+				if (pos.size() == 1 && neg.size() == 2) {
+					innerStructure::Point3d A = pos[0];
+					innerStructure::Point3d B = neg[0];
+					innerStructure::Point3d C = neg[1];
+
+					// Small triangle
+					innerStructure::vertexId p1_new = model_cut_1->structure.addVertexIfNotExist(A);
+					innerStructure::vertexId p2_new = model_cut_1->structure.addVertexIfNotExist(I1);
+					innerStructure::vertexId p3_new = model_cut_1->structure.addVertexIfNotExist(I2);
+					innerStructure::normalId n1_new = model_cut_1->structure.addNormalForce(n1);
+					innerStructure::normalId n2_new = model_cut_1->structure.addNormalForce(n2);
+					innerStructure::normalId n3_new = model_cut_1->structure.addNormalForce(n3);
+					model_cut_1->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
+
+					/*
+					// маленький треугольник
+					result.push_back({ A, I1, I2 });
+
+					// четырёхугольник разбиваем на 2 треугольника
+					result.push_back({ B, C, I1 });
+					result.push_back({ C, I1, I2 });
+					*/
+				}
+				else if (pos.size() == 2 && neg.size() == 1) {
+					/*
+					Point A = neg[0];
+					Point B = pos[0];
+					Point C = pos[1];
+
+					result.push_back({ A, I1, I2 });
+					result.push_back({ B, C, I1 });
+					result.push_back({ C, I1, I2 });
+					*/
+					innerStructure::Point3d A = neg[0];
+					innerStructure::Point3d B = pos[0];
+					innerStructure::Point3d C = pos[1];
+
+					innerStructure::vertexId p1_new = model_cut_1->structure.addVertexIfNotExist(I2);
+					innerStructure::vertexId p2_new = model_cut_1->structure.addVertexIfNotExist(C);
+					innerStructure::vertexId p3_new = model_cut_1->structure.addVertexIfNotExist(B);
+					innerStructure::normalId n1_new = model_cut_1->structure.addNormalForce(n1);
+					innerStructure::normalId n2_new = model_cut_1->structure.addNormalForce(n2);
+					innerStructure::normalId n3_new = model_cut_1->structure.addNormalForce(n3);
+					model_cut_1->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
+
+					innerStructure::vertexId p1_new2 = model_cut_1->structure.addVertexIfNotExist(A);
+					innerStructure::vertexId p2_new2 = model_cut_1->structure.addVertexIfNotExist(I1);
+					innerStructure::vertexId p3_new2 = model_cut_1->structure.addVertexIfNotExist(I2);
+					innerStructure::normalId n1_new2 = model_cut_1->structure.addNormalForce(n1);
+					innerStructure::normalId n2_new2 = model_cut_1->structure.addNormalForce(n2);
+					innerStructure::normalId n3_new2 = model_cut_1->structure.addNormalForce(n3);
+					model_cut_1->structure.addTriangle(innerStructure::Triangle{ p1_new2, p2_new2, p3_new2, n1_new2, n2_new2, n3_new2 });
+				}
+
 
 			}
+			
 
 		}
 
