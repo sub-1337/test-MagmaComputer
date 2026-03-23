@@ -35,7 +35,35 @@ private:
 			coordinate x;
 			coordinate y;
 			coordinate z;
+			Point3d() : x(0.0), y(0.0), z(0.0) {}
+			Point3d(coordinate x, coordinate y, coordinate z) : x(x), y(y), z(z) {}
+			Point3d operator*(const double val) const
+			{
+				Point3d point{ x * val, y * val, z * val };
+				return point;
+			}
+			Point3d operator+(const Point3d& other) const
+			{
+				Point3d point{x + other.x, y + other.y, z + other.z};
+				return point;
+			}
+			Point3d operator-(const Point3d& other) const
+			{
+				Point3d point{ x - other.x, y - other.y, z - other.z };
+				return point;
+			}
+			// Vector multiplication
+			// returns new value
+			Point3d cross(Point3d b)
+			{
+				Point3d c;
+				c.x = this->y * b.z - this->z * b.y;
+				c.y = this->z * b.x - this->x * b.z;
+				c.z = this->x * b.y - this->y * b.x;
+				return c;
+			}
 		};
+
 		// Used for vertex enumeration
 		using vertexId = size_t;
 		// Used for normals enumeration
@@ -62,15 +90,7 @@ private:
 		{
 			return is_equal(a.x, b.x) && is_equal(a.y, b.y) && is_equal(a.z, b.z);		
 		}
-		// Vector multiplication
-		static Point3d cross(Point3d a, Point3d b)
-		{
-			Point3d c;
-			c.x = a.y * b.z - a.z * b.y;
-			c.y = a.z * b.x - a.x * b.z;
-			c.z = a.x * b.y - a.y * b.x;
-			return c;
-		}
+		
 		// TODO: replace double with aliased value
 		// Value of the plane at point
 		static double planeValue(double a, double b, double c, double d, Point3d p) {
@@ -186,12 +206,21 @@ public:
 				std::wcerr << "Internal error: " << err.what();
 				continue;
 			}
-			
 
-			double a = -5;
-			double b = 3;
-			double c = 2;
-			double d = 1;
+			// Cutting plane coords
+			innerStructure::Point3d P1{ 0.0, 5.0, 0.0 }, P2{ 10, 5, 0 }, P3{0,5,10};
+
+			double a, b, c, d = 0;
+			innerStructure::Point3d V1 = P2 - P1;
+			innerStructure::Point3d V2 = P3 - P1;
+
+			innerStructure::Point3d N = V1.cross(V2);
+
+			a = N.x;
+			b = N.y;
+			c = N.z;
+			d = -(a * P1.x + b * P1.y + c * P1.z);
+			
 
 			auto getDistance = [a,b,c,d](innerStructure::Point3d p) -> innerStructure::coordinate
 				{
@@ -215,9 +244,9 @@ public:
 				{
 					currModel = model_cut_2;
 				}
-				innerStructure::vertexId p1_new = currModel->structure.addVertexIfNotExist(p1);
-				innerStructure::vertexId p2_new = currModel->structure.addVertexIfNotExist(p2);
-				innerStructure::vertexId p3_new = currModel->structure.addVertexIfNotExist(p3);
+				innerStructure::vertexId p1_new = currModel->structure.addVertexForce(p1);
+				innerStructure::vertexId p2_new = currModel->structure.addVertexForce(p2);
+				innerStructure::vertexId p3_new = currModel->structure.addVertexForce(p3);
 
 				innerStructure::normalId n1_new = currModel->structure.addNormalForce(n1);
 				innerStructure::normalId n2_new = currModel->structure.addNormalForce(n2);
@@ -272,9 +301,9 @@ public:
 					{
 						currModel = model_cut_2;
 					}
-					innerStructure::vertexId p1_new = currModel->structure.addVertexIfNotExist(p1);
-					innerStructure::vertexId p2_new = currModel->structure.addVertexIfNotExist(p2);
-					innerStructure::vertexId p3_new = currModel->structure.addVertexIfNotExist(p3);
+					innerStructure::vertexId p1_new = currModel->structure.addVertexForce(p1);
+					innerStructure::vertexId p2_new = currModel->structure.addVertexForce(p2);
+					innerStructure::vertexId p3_new = currModel->structure.addVertexForce(p3);
 
 					innerStructure::normalId n1_new = currModel->structure.addNormalForce(n1);
 					innerStructure::normalId n2_new = currModel->structure.addNormalForce(n2);
@@ -307,9 +336,10 @@ public:
 					innerStructure::Point3d C = neg[1];
 
 					// Small triangle
-					innerStructure::vertexId p1_new = model_cut_1->structure.addVertexIfNotExist(A);
-					innerStructure::vertexId p2_new = model_cut_1->structure.addVertexIfNotExist(I1);
-					innerStructure::vertexId p3_new = model_cut_1->structure.addVertexIfNotExist(I2);
+					// ВОТ ТУТ ЗАЕБИСЬ ВСЁ
+					innerStructure::vertexId p1_new = model_cut_1->structure.addVertexForce(A);
+					innerStructure::vertexId p2_new = model_cut_1->structure.addVertexForce(I1);
+					innerStructure::vertexId p3_new = model_cut_1->structure.addVertexForce(I2);
 					innerStructure::normalId n1_new = model_cut_1->structure.addNormalForce(n1);
 					innerStructure::normalId n2_new = model_cut_1->structure.addNormalForce(n2);
 					innerStructure::normalId n3_new = model_cut_1->structure.addNormalForce(n3);
@@ -338,17 +368,17 @@ public:
 					innerStructure::Point3d B = pos[0];
 					innerStructure::Point3d C = pos[1];
 
-					innerStructure::vertexId p1_new = model_cut_1->structure.addVertexIfNotExist(I2);
-					innerStructure::vertexId p2_new = model_cut_1->structure.addVertexIfNotExist(C);
-					innerStructure::vertexId p3_new = model_cut_1->structure.addVertexIfNotExist(B);
+					innerStructure::vertexId p1_new = model_cut_1->structure.addVertexForce(B);
+					innerStructure::vertexId p2_new = model_cut_1->structure.addVertexForce(C);
+					innerStructure::vertexId p3_new = model_cut_1->structure.addVertexForce(I1);
 					innerStructure::normalId n1_new = model_cut_1->structure.addNormalForce(n1);
 					innerStructure::normalId n2_new = model_cut_1->structure.addNormalForce(n2);
 					innerStructure::normalId n3_new = model_cut_1->structure.addNormalForce(n3);
 					model_cut_1->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
 
-					innerStructure::vertexId p1_new2 = model_cut_1->structure.addVertexIfNotExist(A);
-					innerStructure::vertexId p2_new2 = model_cut_1->structure.addVertexIfNotExist(I1);
-					innerStructure::vertexId p3_new2 = model_cut_1->structure.addVertexIfNotExist(I2);
+					innerStructure::vertexId p1_new2 = model_cut_1->structure.addVertexForce(I1);
+					innerStructure::vertexId p2_new2 = model_cut_1->structure.addVertexForce(I2);
+					innerStructure::vertexId p3_new2 = model_cut_1->structure.addVertexForce(C);
 					innerStructure::normalId n1_new2 = model_cut_1->structure.addNormalForce(n1);
 					innerStructure::normalId n2_new2 = model_cut_1->structure.addNormalForce(n2);
 					innerStructure::normalId n3_new2 = model_cut_1->structure.addNormalForce(n3);
