@@ -239,6 +239,23 @@ public:
 			innerStructure::lenght S2 = innerStructure::planeValue(Plane, p2);
 			innerStructure::lenght S3 = innerStructure::planeValue(Plane, p3);
 
+			// Add triangle to database of selected model
+			auto addTrangle = [](
+				model_ptr currModel,
+				innerStructure::Point3d p1, innerStructure::Point3d p2, innerStructure::Point3d p3,
+				innerStructure::Point3d n1, innerStructure::Point3d n2, innerStructure::Point3d n3 ) 
+				{
+					innerStructure::vertexId p1_new = currModel->structure.addVertexForce(p1);
+					innerStructure::vertexId p2_new = currModel->structure.addVertexForce(p2);
+					innerStructure::vertexId p3_new = currModel->structure.addVertexForce(p3);
+
+					innerStructure::normalId n1_new = currModel->structure.addNormalForce(n1);
+					innerStructure::normalId n2_new = currModel->structure.addNormalForce(n2);
+					innerStructure::normalId n3_new = currModel->structure.addNormalForce(n3);
+
+					currModel->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
+				};
+
 			// Check if all 3 point exist entirely from one or other side
 			if ((std::signbit(S1) == std::signbit(S2)) && (std::signbit(S2) == std::signbit(S3)))
 			{
@@ -252,15 +269,7 @@ public:
 				{
 					currModel = model_cut_2;
 				}
-				innerStructure::vertexId p1_new = currModel->structure.addVertexForce(p1);
-				innerStructure::vertexId p2_new = currModel->structure.addVertexForce(p2);
-				innerStructure::vertexId p3_new = currModel->structure.addVertexForce(p3);
-
-				innerStructure::normalId n1_new = currModel->structure.addNormalForce(n1);
-				innerStructure::normalId n2_new = currModel->structure.addNormalForce(n2);
-				innerStructure::normalId n3_new = currModel->structure.addNormalForce(n3);
-
-				currModel->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
+				addTrangle(currModel, p1, p2, p3, n1, n2, n3);
 			}
 			else
 			{
@@ -380,29 +389,10 @@ public:
 					}
 
 					// Small triangle
-					innerStructure::vertexId p1_new = model_cut_1->structure.addVertexForce(A);
-					innerStructure::vertexId p2_new = model_cut_1->structure.addVertexForce(I1);
-					innerStructure::vertexId p3_new = model_cut_1->structure.addVertexForce(I2);
-					innerStructure::normalId n1_new = model_cut_1->structure.addNormalForce(n1);
-					innerStructure::normalId n2_new = model_cut_1->structure.addNormalForce(n2);
-					innerStructure::normalId n3_new = model_cut_1->structure.addNormalForce(n3);
-					model_cut_1->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
+					addTrangle(model_cut_1, A, I1, I2, n1, n2, n3);
 
-					innerStructure::vertexId p1_new2 = model_cut_2->structure.addVertexForce(B);
-					innerStructure::vertexId p2_new2 = model_cut_2->structure.addVertexForce(C);
-					innerStructure::vertexId p3_new2 = model_cut_2->structure.addVertexForce(I1);
-					innerStructure::normalId n1_new2 = model_cut_2->structure.addNormalForce(n1);
-					innerStructure::normalId n2_new2 = model_cut_2->structure.addNormalForce(n2);
-					innerStructure::normalId n3_new2 = model_cut_2->structure.addNormalForce(n3);
-					model_cut_2->structure.addTriangle(innerStructure::Triangle{ p1_new2, p2_new2, p3_new2, n1_new2, n2_new2, n3_new2 });
-
-					innerStructure::vertexId p1_new3 = model_cut_2->structure.addVertexForce(C);
-					innerStructure::vertexId p2_new3 = model_cut_2->structure.addVertexForce(I1);
-					innerStructure::vertexId p3_new3 = model_cut_2->structure.addVertexForce(I2);
-					innerStructure::normalId n1_new3 = model_cut_2->structure.addNormalForce(n1);
-					innerStructure::normalId n2_new3 = model_cut_2->structure.addNormalForce(n2);
-					innerStructure::normalId n3_new3 = model_cut_2->structure.addNormalForce(n3);
-					model_cut_2->structure.addTriangle(innerStructure::Triangle{ p1_new3, p2_new3, p3_new3, n1_new3, n2_new3, n3_new3 });
+					addTrangle(model_cut_2, B, C, I1, n1, n2, n3);
+					addTrangle(model_cut_2, C, I1, I2, n1, n2, n3);
 				}
 				else if (pos.size() == 2 && neg.size() == 1) {
 					
@@ -430,29 +420,10 @@ public:
 						I2 = I_CA;
 					}
 
-					innerStructure::vertexId p1_new = model_cut_2->structure.addVertexForce(A);
-					innerStructure::vertexId p2_new = model_cut_2->structure.addVertexForce(I1);
-					innerStructure::vertexId p3_new = model_cut_2->structure.addVertexForce(I2);
-					innerStructure::normalId n1_new = model_cut_2->structure.addNormalForce(n1);
-					innerStructure::normalId n2_new = model_cut_2->structure.addNormalForce(n2);
-					innerStructure::normalId n3_new = model_cut_2->structure.addNormalForce(n3);
-					model_cut_2->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
+					addTrangle(model_cut_2, A, I1, I2, n1, n2, n3);
 
-					innerStructure::vertexId p1_new2 = model_cut_1->structure.addVertexForce(B);
-					innerStructure::vertexId p2_new2 = model_cut_1->structure.addVertexForce(C);
-					innerStructure::vertexId p3_new2 = model_cut_1->structure.addVertexForce(I1);
-					innerStructure::normalId n1_new2 = model_cut_1->structure.addNormalForce(n1);
-					innerStructure::normalId n2_new2 = model_cut_1->structure.addNormalForce(n2);
-					innerStructure::normalId n3_new2 = model_cut_1->structure.addNormalForce(n3);
-					model_cut_1->structure.addTriangle(innerStructure::Triangle{ p1_new2, p2_new2, p3_new2, n1_new2, n2_new2, n3_new2 });
-
-					innerStructure::vertexId p1_new3 = model_cut_1->structure.addVertexForce(I1);
-					innerStructure::vertexId p2_new3 = model_cut_1->structure.addVertexForce(I2);
-					innerStructure::vertexId p3_new3 = model_cut_1->structure.addVertexForce(C);
-					innerStructure::normalId n1_new3 = model_cut_1->structure.addNormalForce(n1);
-					innerStructure::normalId n2_new3 = model_cut_1->structure.addNormalForce(n2);
-					innerStructure::normalId n3_new3 = model_cut_1->structure.addNormalForce(n3);
-					model_cut_1->structure.addTriangle(innerStructure::Triangle{ p1_new3, p2_new3, p3_new3, n1_new3, n2_new3, n3_new3 });
+					addTrangle(model_cut_1, B, C, I1, n1, n2, n3);
+					addTrangle(model_cut_1, I1, I2, C, n1, n2, n3);
 				}
 
 
