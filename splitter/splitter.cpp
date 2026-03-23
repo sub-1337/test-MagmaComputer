@@ -329,6 +329,22 @@ public:
 						neg.push_back(p);
 				}
 
+				// TODO: REFACTOR
+				innerStructure::Point3d I_AB, I_BC, I_CA;
+				bool hasAB = false, hasBC = false, hasCA = false;
+
+				auto checkEdge = [&](innerStructure::Point3d p1, innerStructure::Point3d p2, innerStructure::Point3d& out, bool& flag) {
+					double v1 = innerStructure::planeValue(a, b, c, d, p1);
+					double v2 = innerStructure::planeValue(a, b, c, d, p2);
+
+					if (v1 * v2 < 0) {
+						out = innerStructure::intersect(p1, p2, a, b, c, d);
+						flag = true;
+					}
+					};
+
+				
+
 				// случай: 1 вершина с одной стороны, 2 с другой
 				if (pos.size() == 1 && neg.size() == 2) {
 					innerStructure::Point3d A = pos[0];
@@ -367,6 +383,23 @@ public:
 					innerStructure::Point3d A = neg[0];
 					innerStructure::Point3d B = pos[0];
 					innerStructure::Point3d C = pos[1];
+
+					checkEdge(A, B, I_AB, hasAB);
+					checkEdge(B, C, I_BC, hasBC);
+					checkEdge(C, A, I_CA, hasCA);
+
+					if (hasAB && hasCA) {
+						I1 = I_AB;
+						I2 = I_CA;
+					}
+					else if (hasAB && hasBC) {
+						I1 = I_AB;
+						I2 = I_BC;
+					}
+					else {
+						I1 = I_BC;
+						I2 = I_CA;
+					}
 
 					innerStructure::vertexId p1_new = model_cut_1->structure.addVertexForce(B);
 					innerStructure::vertexId p2_new = model_cut_1->structure.addVertexForce(C);
