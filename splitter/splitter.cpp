@@ -192,7 +192,9 @@ private:
 public:
 	// Split current model by plane
 	// returns 2 smart pointers with new models
-	two_models_ptr split() 
+	two_models_ptr split(double input_x1, double input_y1, double input_z1,
+		double input_x2, double input_y2, double input_z2,
+		double input_x3, double input_y3, double input_z3)
 	{
 		model_ptr model_cut_1 = create_model();
 		model_ptr model_cut_2 = create_model();
@@ -228,18 +230,12 @@ public:
 			}
 
 			// Cutting plane coords
-			innerStructure::Point3d P1{ 0.0, 5.0, 0.0 }, P2{ 10, 5, 0 }, P3{0,5,10};
-
+			innerStructure::Point3d P1{ input_x1, input_y1, input_z1}, P2{ input_x2, input_y2, input_z2 }, P3{ input_x3, input_y3, input_z3 };
 			innerStructure::Plane3d Plane(P1, P2, P3);			
 
-			auto getDistance = [](innerStructure::Point3d p, innerStructure::Plane3d plane) -> innerStructure::coordinate
-				{
-					return plane.a * p.x + plane.b * p.y + plane.c * p.z + plane.d;
-				};
-
-			innerStructure::lenght S1 = getDistance(p1, Plane);
-			innerStructure::lenght S2 = getDistance(p2, Plane);
-			innerStructure::lenght S3 = getDistance(p3, Plane);
+			innerStructure::lenght S1 = innerStructure::planeValue(Plane, p1);
+			innerStructure::lenght S2 = innerStructure::planeValue(Plane, p2);
+			innerStructure::lenght S3 = innerStructure::planeValue(Plane, p3);
 
 			// Check if all 3 point exist entirely from one or other side
 			if ((std::signbit(S1) == std::signbit(S2)) && (std::signbit(S2) == std::signbit(S3)))
@@ -677,7 +673,10 @@ int main()
 
 	//m->saveModel(outTestFile);
 	auto startSplit = std::chrono::steady_clock::now();
-	two_models_ptr models = m->split();
+	two_models_ptr models = m->split(
+		0.0, 5.0, 0.0,	// Vector 1
+		10, 5, 0,		// Vector 2
+		0, 5, 10);		// Vector 3
 	auto endSplit = std::chrono::steady_clock::now();
 	auto durationSplit = std::chrono::duration_cast<std::chrono::milliseconds>(endSplit - startSplit);
 
