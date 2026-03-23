@@ -29,6 +29,8 @@ private:
 		using coordinate = double;
 		// Used for lenght calculations
 		using lenght = double;
+		// Used for mathemathic function parameters
+		using mathValueType = double;
 		// Used for representing 3d point in space
 		struct Point3d
 		{
@@ -37,7 +39,7 @@ private:
 			coordinate z;
 			Point3d() : x(0.0), y(0.0), z(0.0) {}
 			Point3d(coordinate x, coordinate y, coordinate z) : x(x), y(y), z(z) {}
-			Point3d operator*(const double val) const
+			Point3d operator*(const mathValueType val) const
 			{
 				Point3d point{ x * val, y * val, z * val };
 				return point;
@@ -66,10 +68,10 @@ private:
 		// Used for represent 3d plane
 		struct Plane3d
 		{
-			double a;
-			double b;
-			double c;
-			double d;
+			mathValueType a;
+			mathValueType b;
+			mathValueType c;
+			mathValueType d;
 			Plane3d() : a(0), b(0), c(0), d(0) {}
 			Plane3d(Point3d P1, Point3d P2, Point3d P3) 
 			{
@@ -113,15 +115,15 @@ private:
 		
 		// TODO: replace double with aliased value
 		// Value of the plane at point
-		static double planeValue(Plane3d plane, Point3d p) {
+		static mathValueType planeValue(Plane3d plane, Point3d p) {
 			return plane.a * p.x + plane.b * p.y + plane.c * p.z + plane.d;
 		}
 		// Intersection of line with plane
 		static Point3d intersect(Point3d p1, Point3d p2, Plane3d plane) {
-			double v1 = planeValue(plane, p1);
-			double v2 = planeValue(plane, p2);
+			mathValueType v1 = planeValue(plane, p1);
+			mathValueType v2 = planeValue(plane, p2);
 
-			double t = v1 / (v1 - v2);
+			mathValueType t = v1 / (v1 - v2);
 
 			Point3d res;
 			res.x = p1.x + t * (p2.x - p1.x);
@@ -273,8 +275,8 @@ public:
 						innerStructure::Point3d p1 = pts[i];
 						innerStructure::Point3d p2 = pts[(i + 1) % 3];
 
-						double v1 = innerStructure::planeValue(plane, p1);
-						double v2 = innerStructure::planeValue(plane, p2);
+						innerStructure::mathValueType v1 = innerStructure::planeValue(plane, p1);
+						innerStructure::mathValueType v2 = innerStructure::planeValue(plane, p2);
 
 						// точка лежит на плоскости
 						if (is_equal(v1, 0.0)) result.push_back(p1);
@@ -340,8 +342,8 @@ public:
 				bool hasAB = false, hasBC = false, hasCA = false;
 
 				auto checkEdge = [&](innerStructure::Point3d p1, innerStructure::Point3d p2, innerStructure::Point3d& out, bool& flag) {
-					double v1 = innerStructure::planeValue(Plane, p1);
-					double v2 = innerStructure::planeValue(Plane, p2);
+					innerStructure::mathValueType v1 = innerStructure::planeValue(Plane, p1);
+					innerStructure::mathValueType v2 = innerStructure::planeValue(Plane, p2);
 
 					if (v1 * v2 < 0) {
 						out = innerStructure::intersect(p1, p2, Plane);
