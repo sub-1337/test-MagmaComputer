@@ -14,13 +14,12 @@ Config example:
 
 ```
 ./cube.obj
-./cube_left.obj
-./cubde_right.obj
 0.0 5.0 0.0
 10.0 5.0 0.0
 0.0 5.0 10.0
 ```
 
 First line - source file
-Second 2 - destanation
 next 3 vectors representing cutting plane.
+
+Output file names will be **source file** + **left/right**

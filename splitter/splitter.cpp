@@ -595,6 +595,13 @@ public:
 	{
 		std::wofstream out(filename);
 
+		if (!out.is_open())
+		{
+			std::wcerr << L"Can't write to file." << std::endl;
+			out.close();
+			return;
+		}
+
 		// Output commentary
 		out << "# Created by test program" << std::endl;
 
@@ -623,6 +630,7 @@ public:
 				<< " " << structure.triangles[i].vert[2] << "//" << structure.triangles[i].normal[2] 
 				<< std::endl;
 		}
+		out.close();
 	}
 };
 
@@ -643,15 +651,41 @@ std::string add2ToFilename(const std::string& path, const std::string& postfix) 
 }
 
 int main(int argc, char* argv[])
-{
-	//std::wifstream in(filename);
-	
+{	
 	std::string configPath = "config.txt";
+	configPath = "D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\config.txt";
 	if (argc == 2)
 	{
 		configPath = argv[1];
 	}
 	std::string originalFile = "cube.obj";
+
+	double x1, y1, z1;
+	double x2, y2, z2;
+	double x3, y3, z3;
+
+	{
+		std::ifstream in(configPath);
+		if (in.is_open())
+		{
+			in >> originalFile;
+			in >> x1 >> y1 >> z1;
+			in >> x2 >> y2 >> z2;
+			in >> x3 >> y3 >> z3;
+			if (in.fail() || in.bad())
+			{
+				std::cout << "Error while parsing config" << std::endl;
+				return 1;
+			}
+		}
+		else
+		{
+			std::cout << "Can't open config file." << std::endl;
+			return 1;
+		}
+		in.close();
+	}
+
 	std::string saveFileLeft = add2ToFilename(originalFile, "_left");
 	std::string saveFileRight = add2ToFilename(originalFile, "_right");
 
