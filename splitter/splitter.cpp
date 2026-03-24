@@ -251,6 +251,7 @@ public:
 			innerStructure::lenght S2 = innerStructure::planeValue(Plane, p2);
 			innerStructure::lenght S3 = innerStructure::planeValue(Plane, p3);
 
+			// Calculated normal of triangle - to restore order of vertexes later
 			innerStructure::Point3d AB(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z);
 			innerStructure::Point3d AC(p3.x - p1.x, p3.y - p1.y, p3.z - p1.z);
 			innerStructure::Point3d calculatedN = AB.cross(AC);
