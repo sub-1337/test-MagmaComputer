@@ -688,12 +688,7 @@ int main(int argc, char* argv[])
 
 	std::string saveFileLeft = add2ToFilename(originalFile, "_left");
 	std::string saveFileRight = add2ToFilename(originalFile, "_right");
-
-	//std::string originalFile = "D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube.obj"; //L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb.obj"
-	//std::string outTestFile = "D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_saved.obj";
-	//std::string saveFileLeft = "D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_left.obj"; // L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb_left.obj"
-	//std::string saveFileRight = "D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_right.obj";
-	
+		
 	model_ptr m = create_model();
 	auto startRead = std::chrono::steady_clock::now();
 	try
