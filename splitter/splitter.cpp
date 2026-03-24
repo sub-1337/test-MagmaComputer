@@ -44,6 +44,11 @@ private:
 				Point3d point{ x * val, y * val, z * val };
 				return point;
 			}
+			Point3d operator/(const mathValueType val) const
+			{
+				Point3d point{ x / val, y / val, z / val };
+				return point;
+			}
 			Point3d operator+(const Point3d& other) const
 			{
 				Point3d point{x + other.x, y + other.y, z + other.z};
@@ -62,6 +67,14 @@ private:
 				c.y = this->z * b.x - this->x * b.z;
 				c.z = this->x * b.y - this->y * b.x;
 				return c;
+			}
+			lenght size()
+			{
+				return std::sqrt(x * x + y * y + z * z);
+			}
+			Point3d norm()
+			{
+				return (*this / size());
 			}
 		};
 		// Used for represent 3d plane
@@ -239,10 +252,41 @@ public:
 			innerStructure::lenght S3 = innerStructure::planeValue(Plane, p3);
 
 			// Add triangle to database of selected model
-			auto addTrangle = [](
+			auto addTriangleWithRestore = [](
 				model_ptr currModel,
 				innerStructure::Point3d p1, innerStructure::Point3d p2, innerStructure::Point3d p3,
 				innerStructure::Point3d n1, innerStructure::Point3d n2, innerStructure::Point3d n3 ) 
+				{
+					// Check order
+					innerStructure::Point3d AB(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z);
+					innerStructure::Point3d AC(p3.x - p1.x, p3.y - p1.y, p3.z - p1.z);
+					innerStructure::Point3d norm = AB.cross(AC);
+					norm = norm.norm();
+					
+					//Restore correct order of vertexes
+					if (innerStructure::is_points_same(n1, n2) && innerStructure::is_points_same(n2, n3))
+					{
+						if (!innerStructure::is_points_same(norm, n1))
+						{
+							std::swap(p1, p3);
+						}
+					}											
+
+					innerStructure::vertexId p1_new = currModel->structure.addVertexForce(p1);
+					innerStructure::vertexId p2_new = currModel->structure.addVertexForce(p2);
+					innerStructure::vertexId p3_new = currModel->structure.addVertexForce(p3);
+
+					innerStructure::normalId n1_new = currModel->structure.addNormalForce(n1);
+					innerStructure::normalId n2_new = currModel->structure.addNormalForce(n2);
+					innerStructure::normalId n3_new = currModel->structure.addNormalForce(n3);
+
+					currModel->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
+				};
+
+			auto addTrangle = [](
+				model_ptr currModel,
+				innerStructure::Point3d p1, innerStructure::Point3d p2, innerStructure::Point3d p3,
+				innerStructure::Point3d n1, innerStructure::Point3d n2, innerStructure::Point3d n3)
 				{
 					innerStructure::vertexId p1_new = currModel->structure.addVertexForce(p1);
 					innerStructure::vertexId p2_new = currModel->structure.addVertexForce(p2);
@@ -256,7 +300,9 @@ public:
 				};
 
 			// Check if all 3 point exist entirely from one or other side
-			if ((std::signbit(S1) == std::signbit(S2)) && (std::signbit(S2) == std::signbit(S3)))
+			if ((std::signbit(S1) == std::signbit(S2)) && (std::signbit(S2) == std::signbit(S3)) 
+				&& (!is_equal(S1, 0.0)) && (!is_equal(S2, 0.0)) && (!is_equal(S3, 0.0)))
+				
 			{
 				model_ptr currModel;
 				if (S1 > 0)
@@ -387,10 +433,10 @@ public:
 					}
 
 					// Small triangle
-					addTrangle(model_cut_1, A, I1, I2, n1, n2, n3);
+					addTriangleWithRestore(model_cut_1, A, I1, I2, n1, n2, n3);
 
-					addTrangle(model_cut_2, B, C, I1, n1, n2, n3);
-					addTrangle(model_cut_2, C, I1, I2, n1, n2, n3);
+					addTriangleWithRestore(model_cut_2, B, C, I1, n1, n2, n3);
+					addTriangleWithRestore(model_cut_2, C, I1, I2, n1, n2, n3);
 				}
 				else if (pos.size() == 2 && neg.size() == 1) {
 					
@@ -418,10 +464,10 @@ public:
 						I2 = I_CA;
 					}
 
-					addTrangle(model_cut_2, A, I1, I2, n1, n2, n3);
+					addTriangleWithRestore(model_cut_2, A, I1, I2, n1, n2, n3);
 
-					addTrangle(model_cut_1, B, C, I1, n1, n2, n3);
-					addTrangle(model_cut_1, I1, I2, C, n1, n2, n3);
+					addTriangleWithRestore(model_cut_1, B, C, I1, n1, n2, n3);
+					addTriangleWithRestore(model_cut_1, I1, I2, C, n1, n2, n3);
 				}
 			}
 		}
@@ -457,7 +503,7 @@ public:
 					std::cerr << "Error while parsing prefix at line " << lineNumber << std::endl;
 					continue;
 				}									
-				if (prefix[0] || prefix == "#") // Ignore comment
+				if (prefix[0] == '#' || prefix == "#") // Ignore comment
 				{
 					continue;
 				}
@@ -591,7 +637,7 @@ public:
 	// Saves current model to file in .obj format
 	void saveModel(const std::string& filename)
 	{
-		std::wofstream out(filename);
+		std::ofstream out(filename);
 
 		if (!out.is_open())
 		{
@@ -711,9 +757,9 @@ int main(int argc, char* argv[])
 	try
 	{
 		models = m->split(
-			0.0, 5.0, 0.0,	// Vector 1
-			10, 5, 0,		// Vector 2
-			0, 5, 10);		// Vector 3
+			x1, y1, z1,	// Vector 1
+			x2, y2, z2,		// Vector 2
+			x3, y3, z3);		// Vector 3
 	}
 	catch (...)
 	{
