@@ -7,6 +7,8 @@ Build process is quite strightforward - just build with Cmake.
 cd splitter
 mkdir out
 cmake -B out -S .
+cd out
+make
 ```
 
 ### Format of file
