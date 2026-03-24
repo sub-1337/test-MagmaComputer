@@ -1,5 +1,14 @@
 # test-MagmaComputer
 
+### Build
+Build process is quite strightforward - just build with Cmake.
+
+```
+cd splitter
+mkdir out
+cmake -B out -S .
+```
+
 ### Format of file
 Program uses .obj format to read/write model.
 Example file:
@@ -35,3 +44,5 @@ First line - source file
 next 3 vectors representing cutting plane.
 
 Output file names will be **source file** + **left/right**
+
+Copy `splitter/tests/files` to your binary folder.
