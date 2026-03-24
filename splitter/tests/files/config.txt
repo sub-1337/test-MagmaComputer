@@ -1,4 +1,4 @@
-D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube.obj
+D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\bulb.obj
 0 10 0
 10 10 0
 0 10 10

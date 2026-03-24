@@ -251,11 +251,17 @@ public:
 			innerStructure::lenght S2 = innerStructure::planeValue(Plane, p2);
 			innerStructure::lenght S3 = innerStructure::planeValue(Plane, p3);
 
+			innerStructure::Point3d AB(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z);
+			innerStructure::Point3d AC(p3.x - p1.x, p3.y - p1.y, p3.z - p1.z);
+			innerStructure::Point3d calculatedN = AB.cross(AC);
+			calculatedN = calculatedN.norm();
+
 			// Add triangle to database of selected model
 			auto addTriangleWithRestore = [](
 				model_ptr currModel,
 				innerStructure::Point3d p1, innerStructure::Point3d p2, innerStructure::Point3d p3,
-				innerStructure::Point3d n1, innerStructure::Point3d n2, innerStructure::Point3d n3 ) 
+				innerStructure::Point3d n1, innerStructure::Point3d n2, innerStructure::Point3d n3,
+				innerStructure::Point3d calculatedN ) 
 				{
 					// Check order
 					innerStructure::Point3d AB(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z);
@@ -264,13 +270,11 @@ public:
 					norm = norm.norm();
 					
 					//Restore correct order of vertexes
-					if (innerStructure::is_points_same(n1, n2) && innerStructure::is_points_same(n2, n3))
+					if (!innerStructure::is_points_same(norm, calculatedN))
 					{
-						if (!innerStructure::is_points_same(norm, n1))
-						{
-							std::swap(p1, p3);
-						}
-					}											
+						std::swap(p1, p3);
+					}
+															
 
 					innerStructure::vertexId p1_new = currModel->structure.addVertexForce(p1);
 					innerStructure::vertexId p2_new = currModel->structure.addVertexForce(p2);
@@ -318,61 +322,86 @@ public:
 			}
 			else
 			{
-				auto calcIntersect = [](const innerStructure::Point3d T1, const innerStructure::Point3d T2, const innerStructure::Point3d T3,
-					const innerStructure::Plane3d plane) -> std::vector<innerStructure::Point3d>
+				auto calcIntersect = [](const innerStructure::Point3d T1,
+					const innerStructure::Point3d T2,
+					const innerStructure::Point3d T3,
+					const innerStructure::Plane3d plane)
+					-> std::vector<innerStructure::Point3d>
 					{
-					std::vector<innerStructure::Point3d> result;
+						std::vector<innerStructure::Point3d> result;
+						std::vector<innerStructure::Point3d> pts = { T1, T2, T3 };
 
-					std::vector<innerStructure::Point3d> pts = { T1, T2, T3 };
+						auto add_unique = [&](const innerStructure::Point3d& p) {
+							for (const auto& r : result) {
+								if (innerStructure::is_points_same(r, p)) return;
+							}
+							result.push_back(p);
+							};
 
-					for (size_t i = 0; i < 3; i++) {
-						innerStructure::Point3d p1 = pts[i];
-						innerStructure::Point3d p2 = pts[(i + 1) % 3];
+						for (size_t i = 0; i < 3; i++) {
+							auto p1 = pts[i];
+							auto p2 = pts[(i + 1) % 3];
 
-						innerStructure::mathValueType v1 = innerStructure::planeValue(plane, p1);
-						innerStructure::mathValueType v2 = innerStructure::planeValue(plane, p2);
+							auto v1 = innerStructure::planeValue(plane, p1);
+							auto v2 = innerStructure::planeValue(plane, p2);
 
-						// point is on plane
-						if (is_equal(v1, 0.0)) result.push_back(p1);
-						if (is_equal(v2, 0.0)) result.push_back(p2);
+							if (is_equal(v1, 0.0)) add_unique(p1);
+							if (is_equal(v2, 0.0)) add_unique(p2);
 
-						// cutting edges
-						if (v1 * v2 < 0) {
-							result.push_back(innerStructure::intersect(p1, p2, plane));
+							if (v1 * v2 < 0) {
+								add_unique(innerStructure::intersect(p1, p2, plane));
+							}
 						}
-					}
 
-					// removing excessive points
-					if (result.size() > 2)
-						result.resize(2);
-
-					return result;
+						return result;
 					};
 				std::vector<innerStructure::Point3d> cutPoints = calcIntersect(p1, p2, p3, Plane);
 
+				const double eps = 1e-6;
+
+				auto classify = [eps](double s) {
+					if (s > eps) return 1;    // сверху
+					if (s < -eps) return -1;  // снизу
+					return 0;                 // на плоскости
+					};
+
 				//TODO: refactor
-				if (cutPoints.size() < 2) // If no intersection
+				if (cutPoints.size() == 3)
 				{
-					model_ptr currModel;
-					if (S1 > 0)
+					addTriangleWithRestore(model_cut_1, p1, p2, p3, n1, n2, n3, calculatedN);
+					addTriangleWithRestore(model_cut_2, p1, p2, p3, n1, n2, n3, calculatedN);
+				}
+				else if (cutPoints.size() == 1) // If no intersection
+				{		
+					//addTriangleWithRestore(model_cut_1, p1, p2, p3, n1, n2, n3);
+					//addTriangleWithRestore(model_cut_2, p1, p2, p3, n1, n2, n3);
+					int C1 = classify(S1);
+					int C2 = classify(S2);
+					int C3 = classify(S3);
+					if (C1 == 1 && C2 == 1)
 					{
-						currModel = model_cut_1;
-
+						addTriangleWithRestore(model_cut_1, p1, p2, p3, n1, n2, n3, calculatedN);
 					}
-					else
+					if (C1 == 1 && C3 == 1)
 					{
-						currModel = model_cut_2;
+						addTriangleWithRestore(model_cut_1, p1, p2, p3, n1, n2, n3, calculatedN);
 					}
-					innerStructure::vertexId p1_new = currModel->structure.addVertexForce(p1);
-					innerStructure::vertexId p2_new = currModel->structure.addVertexForce(p2);
-					innerStructure::vertexId p3_new = currModel->structure.addVertexForce(p3);
-
-					innerStructure::normalId n1_new = currModel->structure.addNormalForce(n1);
-					innerStructure::normalId n2_new = currModel->structure.addNormalForce(n2);
-					innerStructure::normalId n3_new = currModel->structure.addNormalForce(n3);
-
-					currModel->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
-
+					if (C2 == 1 && C3 == 1)
+					{
+						addTriangleWithRestore(model_cut_1, p1, p2, p3, n1, n2, n3, calculatedN);
+					}
+					if (C1 == -1 && C2 == -1)
+					{
+						addTriangleWithRestore(model_cut_2, p1, p2, p3, n1, n2, n3, calculatedN);
+					}
+					if (C1 == -1 && C3 == -1)
+					{
+						addTriangleWithRestore(model_cut_2, p1, p2, p3, n1, n2, n3, calculatedN);
+					}
+					if (C2 == -1 && C3 == -1)
+					{
+						addTriangleWithRestore(model_cut_2, p1, p2, p3, n1, n2, n3, calculatedN);
+					}
 					continue;
 				}
 
@@ -433,10 +462,10 @@ public:
 					}
 
 					// Small triangle
-					addTriangleWithRestore(model_cut_1, A, I1, I2, n1, n2, n3);
+					addTriangleWithRestore(model_cut_1, A, I1, I2, n1, n2, n3, calculatedN);
 
-					addTriangleWithRestore(model_cut_2, B, C, I1, n1, n2, n3);
-					addTriangleWithRestore(model_cut_2, C, I1, I2, n1, n2, n3);
+					addTriangleWithRestore(model_cut_2, B, C, I1, n1, n2, n3, calculatedN);
+					addTriangleWithRestore(model_cut_2, C, I1, I2, n1, n2, n3, calculatedN);
 				}
 				else if (pos.size() == 2 && neg.size() == 1) {
 					
@@ -464,10 +493,26 @@ public:
 						I2 = I_CA;
 					}
 
-					addTriangleWithRestore(model_cut_2, A, I1, I2, n1, n2, n3);
+					addTriangleWithRestore(model_cut_2, A, I1, I2, n1, n2, n3, calculatedN);
 
-					addTriangleWithRestore(model_cut_1, B, C, I1, n1, n2, n3);
-					addTriangleWithRestore(model_cut_1, I1, I2, C, n1, n2, n3);
+					addTriangleWithRestore(model_cut_1, B, C, I1, n1, n2, n3, calculatedN);
+					addTriangleWithRestore(model_cut_1, I1, I2, C, n1, n2, n3, calculatedN);
+				}
+				else if (pos.size() == 3 && neg.size() == 0)
+				{
+					innerStructure::Point3d A = pos[0];
+					innerStructure::Point3d B = pos[1];
+					innerStructure::Point3d C = pos[2];
+					addTriangleWithRestore(model_cut_1, A, B, C, n1, n2, n3, calculatedN);
+					//addTriangleWithRestore(model_cut_2, A, B, C, n1, n2, n3);
+				}
+				else if (pos.size() == 0 && neg.size() == 3)
+				{
+					innerStructure::Point3d A = neg[0];
+					innerStructure::Point3d B = neg[1];
+					innerStructure::Point3d C = neg[2];
+					//addTriangleWithRestore(model_cut_1, A, B, C, n1, n2, n3);
+					addTriangleWithRestore(model_cut_2, A, B, C, n1, n2, n3, calculatedN);
 				}
 			}
 		}
