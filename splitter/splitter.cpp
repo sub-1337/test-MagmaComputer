@@ -258,6 +258,7 @@ public:
 			calculatedN = calculatedN.norm();
 
 			// Add triangle to database of selected model
+			// restore original normal of triangle
 			auto addTriangleWithRestore = [](
 				model_ptr currModel,
 				innerStructure::Point3d p1, innerStructure::Point3d p2, innerStructure::Point3d p3,
@@ -288,6 +289,7 @@ public:
 					currModel->structure.addTriangle(innerStructure::Triangle{ p1_new, p2_new, p3_new, n1_new, n2_new, n3_new });
 				};
 
+			// Add triangle to database
 			auto addTrangle = [](
 				model_ptr currModel,
 				innerStructure::Point3d p1, innerStructure::Point3d p2, innerStructure::Point3d p3,
