@@ -346,10 +346,11 @@ public:
 						neg.push_back(p);
 				}
 
-				// TODO: REFACTOR
 				innerStructure::Point3d I_AB, I_BC, I_CA;
 				bool hasAB = false, hasBC = false, hasCA = false;
 
+				// Fix for wrong vertex problem
+				// when triangle was created by wrong coordinates
 				auto checkEdge = [&](innerStructure::Point3d p1, innerStructure::Point3d p2, innerStructure::Point3d& out, bool& flag) {
 					innerStructure::mathValueType v1 = innerStructure::planeValue(Plane, p1);
 					innerStructure::mathValueType v2 = innerStructure::planeValue(Plane, p2);
@@ -360,9 +361,7 @@ public:
 					}
 					};
 
-				
-
-				// случай: 1 вершина с одной стороны, 2 с другой
+				// case when there is 1 vertex from one side and 2 from other
 				if (pos.size() == 1 && neg.size() == 2) {
 					innerStructure::Point3d A = pos[0];
 					innerStructure::Point3d B = neg[0];
@@ -425,18 +424,14 @@ public:
 					addTrangle(model_cut_1, B, C, I1, n1, n2, n3);
 					addTrangle(model_cut_1, I1, I2, C, n1, n2, n3);
 				}
-
-
 			}
-			
-
 		}
 
 		return result;
 	}
 	// Parses file in .obj format
 	// Ignores lines with incorrect format
-	void readModel(const std::wstring& filename)
+	void readModel(const std::string& filename)
 	{
 		// Buffer for each line
 		std::wstring line;
@@ -596,7 +591,7 @@ public:
 		in.close();
 	}
 	// Saves current model to file in .obj format
-	void saveModel(const std::wstring& filename)
+	void saveModel(const std::string& filename)
 	{
 		std::wofstream out(filename);
 
@@ -630,31 +625,86 @@ public:
 		}
 	}
 };
-int main()
+
+std::string add2ToFilename(const std::string& path, const std::string& postfix) {
+	size_t slashPos = path.find_last_of("/\\");   // Where filename starts
+	size_t dotPos = path.find_last_of('.');       // where is file extension
+
+	if (slashPos == std::string::npos) {
+		slashPos = 0;
+	}
+
+	// if extension not found
+	if (dotPos == std::string::npos || dotPos < slashPos) {
+		return path + postfix;
+	}
+
+	return path.substr(0, dotPos) + postfix + path.substr(dotPos);
+}
+
+int main(int argc, char* argv[])
 {
-	std::wstring originalFile = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube.obj"; //L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb.obj"
-	std::wstring outTestFile = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_saved.obj";
-	std::wstring saveFileLeft = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_left.obj"; // L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb_left.obj"
-	std::wstring saveFileRight = L"D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_right.obj";
+	//std::wifstream in(filename);
+	
+	std::string configPath = "config.txt";
+	if (argc == 2)
+	{
+		configPath = argv[1];
+	}
+	std::string originalFile = "cube.obj";
+	std::string saveFileLeft = add2ToFilename(originalFile, "_left");
+	std::string saveFileRight = add2ToFilename(originalFile, "_right");
+
+	//std::string originalFile = "D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube.obj"; //L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb.obj"
+	//std::string outTestFile = "D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_saved.obj";
+	//std::string saveFileLeft = "D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_left.obj"; // L"/mnt/VMShare/test-MagmaComputer/splitter/tests/files/bulb_left.obj"
+	//std::string saveFileRight = "D:\\VMShare\\test-MagmaComputer\\splitter\\tests\\files\\cube_right.obj";
 	
 	model_ptr m = create_model();
 	auto startRead = std::chrono::steady_clock::now();
-	m->readModel(originalFile);
+	try
+	{
+		m->readModel(originalFile);
+	}
+	catch (...)
+	{
+		std::wcerr << L"Can't read model" << std::endl;
+		return 1;
+	}
+	
 	auto endRead = std::chrono::steady_clock::now();
 
 	auto durationRead = std::chrono::duration_cast<std::chrono::milliseconds>(endRead - startRead);
 
 	//m->saveModel(outTestFile);
 	auto startSplit = std::chrono::steady_clock::now();
-	two_models_ptr models = m->split(
-		0.0, 5.0, 0.0,	// Vector 1
-		10, 5, 0,		// Vector 2
-		0, 5, 10);		// Vector 3
+	two_models_ptr models;
+	try
+	{
+		models = m->split(
+			0.0, 5.0, 0.0,	// Vector 1
+			10, 5, 0,		// Vector 2
+			0, 5, 10);		// Vector 3
+	}
+	catch (...)
+	{
+		std::wcerr << L"Can't split model" << std::endl;
+		return 1;
+	}
+	
 	auto endSplit = std::chrono::steady_clock::now();
 	auto durationSplit = std::chrono::duration_cast<std::chrono::milliseconds>(endSplit - startSplit);
 
-	models.first->saveModel(saveFileLeft);
-	models.second->saveModel(saveFileRight);
+	try
+	{
+		models.first->saveModel(saveFileLeft);
+		models.second->saveModel(saveFileRight);
+	}
+	catch (...)
+	{
+		std::wcerr << L"Can't write models" << std::endl;
+		return 1;
+	}
 
 	std::wcout << "Read time: " << durationRead.count() << std::endl;
 	std::wcout << "Split time: " << durationSplit.count() << std::endl;
