@@ -55,7 +55,6 @@ private:
 				return point;
 			}
 			// Vector multiplication
-			// returns new value
 			Point3d cross(Point3d b)
 			{
 				Point3d c;
@@ -206,7 +205,7 @@ public:
 
 		for (size_t i = 0; i < structure.triangles.size(); i++)
 		{
-			//std::wcout << "Triangle " << i << " of " << structure.triangles.size() << std::endl;
+			//std::cout << "Triangle " << i << " of " << structure.triangles.size() << std::endl;
 			const innerStructure::Triangle currTriangle = structure.triangles[i];
 
 			innerStructure::Point3d p1;
@@ -227,7 +226,7 @@ public:
 			}
 			catch (const std::runtime_error& err)
 			{
-				std::wcerr << "Internal error: " << err.what();
+				std::cerr << "Internal error: " << err.what();
 				continue;
 			}
 
@@ -287,17 +286,17 @@ public:
 						innerStructure::mathValueType v1 = innerStructure::planeValue(plane, p1);
 						innerStructure::mathValueType v2 = innerStructure::planeValue(plane, p2);
 
-						// точка лежит на плоскости
+						// point is on plane
 						if (is_equal(v1, 0.0)) result.push_back(p1);
 						if (is_equal(v2, 0.0)) result.push_back(p2);
 
-						// пересечение ребра
+						// cutting edges
 						if (v1 * v2 < 0) {
 							result.push_back(innerStructure::intersect(p1, p2, plane));
 						}
 					}
 
-					// убираем лишние точки (максимум 2)
+					// removing excessive points
 					if (result.size() > 2)
 						result.resize(2);
 
@@ -434,9 +433,9 @@ public:
 	void readModel(const std::string& filename)
 	{
 		// Buffer for each line
-		std::wstring line;
+		std::string line;
 		// File to read
-		std::wifstream in(filename);
+		std::ifstream in(filename);
 
 		if (in.is_open()) 
 		{
@@ -449,21 +448,20 @@ public:
 					continue;
 				}
 				// Object to parse eacj string
-				std::wistringstream iss(line);
+				std::stringstream iss(line);
 				// Prefix with wich ste string starts
-				std::wstring prefix;
+				std::string prefix;
 
 				if (!(iss >> prefix)) // If error while reading part of line
 				{
-					std::wcerr << L"Error while parsing prefix at line " << lineNumber << std::endl;
+					std::cerr << "Error while parsing prefix at line " << lineNumber << std::endl;
 					continue;
-				}
-					
-				if (prefix == L"#") // Ignore comment
+				}									
+				if (prefix[0] || prefix == "#") // Ignore comment
 				{
 					continue;
 				}
-				else if (prefix == L"v") // Parse vertex
+				else if (prefix == "v") // Parse vertex
 				{
 					innerStructure::coordinate x, y, z;
 					if (iss >> x >> y >> z) // Read 3 numbers and checks read success
@@ -472,11 +470,11 @@ public:
 					}
 					else
 					{
-						std::wcerr << L"Error while parsing vertex at line " << lineNumber << std::endl;
+						std::cerr << "Error while parsing vertex at line " << lineNumber << std::endl;
 						continue;
 					}
 				}
-				else if (prefix == L"vn") // Parse normal
+				else if (prefix == "vn") // Parse normal
 				{					
 					innerStructure::coordinate x, y, z;
 					if (iss >> x >> y >> z)
@@ -485,37 +483,37 @@ public:
 					}
 					else
 					{
-						std::wcerr << L"Error while parsing normals at line " << lineNumber << std::endl;
+						std::cerr << "Error while parsing normals at line " << lineNumber << std::endl;
 						continue;
 					}
 				}
-				else if (prefix == L"f") // Parse triangle
+				else if (prefix == "f") // Parse triangle
 				{					
 					// Parse indexes/normals listed in triangle record
 					// It reads first float point number
 					// then checks for '//' value
 					// then reads the second
 					// the rest of string is discard
-					auto helperParseOctet = [&lineNumber](const std::wstring & part, innerStructure::vertexId& vertex, innerStructure::normalId& normal) -> bool
+					auto helperParseOctet = [&lineNumber](const std::string & part, innerStructure::vertexId& vertex, innerStructure::normalId& normal) -> bool
 					{
-						std::wstringstream ss(part);
+						std::stringstream ss(part);
 						if (!(ss >> vertex))
 							return false;
-						wchar_t _skip1, _skip2;
+						char _skip1, _skip2;
 						ss >> _skip1 >> _skip2;
 						if ((_skip1 != _skip2) && (_skip1 != L'/'))
 							return false;
 						if (!(ss >> normal))
 							return false;
-						std::wstring _check;
+						std::string _check;
 						if (ss >> _check)
 						{
-							std::wcerr << "Warning additional info \"" << _check << "\" at face definition ignored line: " << lineNumber << std::endl;
+							std::cerr << "Warning additional info \"" << _check << "\" at face definition ignored line: " << lineNumber << std::endl;
 						}
 						return true;
 					};
 					// String to store packs of parameters at face record
-					std::wstring part;
+					std::string part;
 					innerStructure::vertexId vertex_1;
 					innerStructure::normalId normal_1;
 
@@ -528,39 +526,39 @@ public:
 					{
 						if (!helperParseOctet(part, vertex_1, normal_1)) // read 1st parameter pack at face record (then read the rest)
 						{
-							std::wcerr << L"Error while parsing triangle, 1st param, inner parse line " << lineNumber << std::endl;
+							std::cerr << "Error while parsing triangle, 1st param, inner parse line " << lineNumber << std::endl;
 							continue;
 						}
 					}
 					else
 					{
-						std::wcerr << L"Error while parsing triangle, 1st param line " << lineNumber << std::endl;
+						std::cerr << "Error while parsing triangle, 1st param line " << lineNumber << std::endl;
 						continue;
 					}
 					if (iss >> part)
 					{
 						if (!helperParseOctet(part, vertex_2, normal_2))
 						{
-							std::wcerr << L"Error while parsing triangle, 2ndt param, inner parse line " << lineNumber << std::endl;
+							std::cerr << "Error while parsing triangle, 2ndt param, inner parse line " << lineNumber << std::endl;
 							continue;
 						}
 					}
 					else
 					{
-						std::wcerr << L"Error while parsing triangle, 2nd param line " << lineNumber << std::endl;
+						std::cerr << "Error while parsing triangle, 2nd param line " << lineNumber << std::endl;
 						continue;
 					}
 					if (iss >> part)
 					{
 						if (!helperParseOctet(part, vertex_3, normal_3))
 						{
-							std::wcerr << L"Error while parsing triangle, 3кrd param, inner parse line " << lineNumber << std::endl;
+							std::cerr << "Error while parsing triangle, 3кrd param, inner parse line " << lineNumber << std::endl;
 							continue;
 						}
 					}
 					else
 					{
-						std::wcerr << L"Error while parsing triangle, 3rd param line " << lineNumber << std::endl;
+						std::cerr << "Error while parsing triangle, 3rd param line " << lineNumber << std::endl;
 						continue;
 					}
 
@@ -570,14 +568,14 @@ public:
 					}
 					catch (...)
 					{
-						std::wcerr << L"Error while adding triangle" << std::endl;
+						std::cerr << "Error while adding triangle" << std::endl;
 						in.close();
 						throw;
 					}
 				}
 				else
 				{
-					std::wcerr << L"Error while parsing, not known prefix \"" << prefix<< "\" at line " << lineNumber << std::endl;
+					std::cerr << "Error while parsing, not known prefix \"" << prefix<< "\" at line " << lineNumber << std::endl;
 					continue;
 				}
 					
@@ -585,7 +583,7 @@ public:
 		}
 		else 
 		{
-			std::wcerr << L"Can't open input file" << std::endl;
+			std::cerr << "Can't open input file" << std::endl;
 		}
 
 		in.close();
@@ -597,7 +595,7 @@ public:
 
 		if (!out.is_open())
 		{
-			std::wcerr << L"Can't write to file." << std::endl;
+			std::cerr << "Can't write to file." << std::endl;
 			out.close();
 			return;
 		}
@@ -634,10 +632,12 @@ public:
 	}
 };
 
+// Function for adding postfix at the end of filename
 std::string add2ToFilename(const std::string& path, const std::string& postfix) {
 	size_t slashPos = path.find_last_of("/\\");   // Where filename starts
 	size_t dotPos = path.find_last_of('.');       // where is file extension
 
+	// If not path with slashes
 	if (slashPos == std::string::npos) {
 		slashPos = 0;
 	}
@@ -697,7 +697,7 @@ int main(int argc, char* argv[])
 	}
 	catch (...)
 	{
-		std::wcerr << L"Can't read model" << std::endl;
+		std::cerr << "Can't read model" << std::endl;
 		return 1;
 	}
 	
@@ -717,7 +717,7 @@ int main(int argc, char* argv[])
 	}
 	catch (...)
 	{
-		std::wcerr << L"Can't split model" << std::endl;
+		std::cerr << "Can't split model" << std::endl;
 		return 1;
 	}
 	
@@ -731,12 +731,12 @@ int main(int argc, char* argv[])
 	}
 	catch (...)
 	{
-		std::wcerr << L"Can't write models" << std::endl;
+		std::cerr << "Can't write models" << std::endl;
 		return 1;
 	}
 
-	std::wcout << "Read time: " << durationRead.count() << std::endl;
-	std::wcout << "Split time: " << durationSplit.count() << std::endl;
+	std::cout << "Read time: " << durationRead.count() << std::endl;
+	std::cout << "Split time: " << durationSplit.count() << std::endl;
 
 	return 0;
 }
